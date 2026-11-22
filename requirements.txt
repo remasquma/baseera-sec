@@ -1,0 +1,37 @@
+--extra-index-url https://download.pytorch.org/whl/cpu
+# Baseera Sec - Local Security Scanner
+# Requirements & Dependencies
+
+# Core Web Framework & Server
+fastapi>=0.115.0
+uvicorn[standard]>=0.32.0
+pydantic>=2.9.0
+SQLAlchemy>=2.0.0
+python-multipart>=0.0.12
+jinja2>=3.1.4
+
+# HTTP Client & Parsing
+requests>=2.32.0
+httpx>=0.27.0
+beautifulsoup4>=4.12.0
+urllib3>=2.2.0
+
+# Cryptography & Security Tokens
+cryptography>=43.0.0
+PyJWT>=2.9.0
+
+# Machine Learning & Local AI (CodeBERT Nazzoor)
+torch>=2.2.0
+transformers>=4.40.0
+safetensors>=0.4.0
+tokenizers>=0.19.0
+lightgbm>=4.0.0
+scikit-learn>=1.6.1
+joblib>=1.3.0
+
+# Local Offline Cognitive Engine (Zero External Cloud Dependencies)
+
+# Utilities & Reporting
+rich>=13.7.0
+pyyaml>=6.0.1
+psutil>=5.9.0

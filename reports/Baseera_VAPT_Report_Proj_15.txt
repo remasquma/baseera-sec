@@ -1,0 +1,22 @@
+================================================================================
+BASEERA SEC - ENTERPRISE VAPT SECURITY ASSESSMENT REPORT
+================================================================================
+Project Name   : Local Package - test_sample.py
+Target URL     : local://uploads/test_sample.py
+Target Type    : Application
+Methodology    : PTES + NIST SP 800-115 (SAST & Config Audit)
+Generated At   : 2026-11-22 11:35:29 UTC
+--------------------------------------------------------------------------------
+1. EXECUTIVE SUMMARY & METRICS
+--------------------------------------------------------------------------------
+Total Verified Vulnerabilities : 0
+Peak CVSS Score                : N/A / 10.0
+OWASP ASVS L1 Compliance       : 100.0%
+CIS Controls v8 Compliance     : 100.0%
+--------------------------------------------------------------------------------
+2. DETAILED FINDINGS BREAKDOWN
+--------------------------------------------------------------------------------
+No vulnerability records are available for this project.
+================================================================================
+End of Report - Baseera Sec Cognitive Security Engine
+================================================================================

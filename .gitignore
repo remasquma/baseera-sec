@@ -1,0 +1,33 @@
+# Python runtime & environments
+.venv/
+venv/
+env/
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Database & Runtime State
+*.db
+*.sqlite3
+
+# Scan Reports & Uploads
+reports/*.sarif
+reports/*.html
+reports/*.pdf
+reports/*.json
+!reports/.gitkeep
+uploads/*
+!uploads/.gitkeep
+
+# Large AI Weights
+*.safetensors
+*.bin
+*.pt
+*.onnx
+
+# Temporary & Editor files
+.vscode/
+.idea/
+*.log
+remas/

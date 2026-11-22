@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="ar" data-theme="dark">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
+  <title>Baseera Sec | Local Security Scanner</title>
+  <link rel="stylesheet" href="css/cyber.css">
+</head>
+<body>
+
+  <!-- Top Enterprise Navigation Bar -->
+  <header class="header-nav">
+    <div class="brand-section">
+      <div class="brand-badge">BASEERA</div>
+      <div>
+        <div class="brand-title" id="txt-brand-title">منصة بصيرة للفحص الأمني المحلي | Baseera Sec</div>
+        <div class="brand-subtitle" id="txt-brand-subtitle">Local web and package security scanner</div>
+      </div>
+    </div>
+
+    <div class="nav-actions">
+      <!-- Local model status -->
+      <div class="api-key-container">
+        <span class="api-key-label" id="lbl-local-models">النماذج المحلية:</span>
+        <button id="btn-local-model-status" class="api-key-btn">تحديث الحالة</button>
+        <span id="local-model-status" class="api-status-pill offline">غير متحقق</span>
+      </div>
+
+      <!-- Theme & Language Toggles -->
+      <button id="btn-theme-toggle" class="btn-toggle">الوضع الفاتح</button>
+      <button id="btn-lang-toggle" class="btn-toggle">English</button>
+
+      <!-- Export Actions -->
+      <button id="btn-owasp-benchmark" class="btn btn-secondary" style="border-color: #0ea5e9; color: #38bdf8;">نتائج الاختبار الاصطناعي</button>
+      <button id="btn-export-pdf" class="btn btn-secondary">تصدير PDF</button>
+      <button id="btn-export-html" class="btn btn-secondary">معاينة HTML</button>
+      <button id="btn-export-sarif" class="btn btn-secondary">SARIF 2.1.0</button>
+    </div>
+  </header>
+
+  <!-- Main Content Layout -->
+  <main class="main-content">
+
+    <!-- Scope & Input Management Card -->
+    <section class="card">
+      <div class="scope-header-row">
+        <!-- Target Type Selection -->
+        <div style="display: flex; align-items: center; gap: 10px;">
+          <span style="font-weight: 700; font-size: 12px; color: var(--text-secondary);" id="lbl-target-type">نوع الهدف ونطاق العمل:</span>
+          <div class="tab-group">
+            <button class="tab-btn active" id="scope-web" data-scope="Web">موقع إلكتروني (Web)</button>
+            <button class="tab-btn" id="scope-app" data-scope="Application">تطبيق (Mobile / Desktop)</button>
+          </div>
+        </div>
+
+        <!-- Input Mode Switcher: Remote URL vs Local File Upload -->
+        <div style="display: flex; align-items: center; gap: 10px;">
+          <span style="font-weight: 700; font-size: 12px; color: var(--text-secondary);" id="lbl-input-mode">مصدر الفحص:</span>
+          <div class="tab-group">
+            <button class="tab-btn active" id="mode-remote">فحص رابط عن بعد (URL)</button>
+            <button class="tab-btn" id="mode-local">رفع حزمة أو ملفات محلية (Upload)</button>
+          </div>
+        </div>
+
+        <!-- Standards Footnote -->
+        <div style="font-size: 11px; color: var(--text-muted);">
+          <strong id="lbl-methodology-title">أساس سير العمل:</strong>
+          <span style="color: var(--accent-primary); font-weight: 600;">مستوحى جزئيًا من PTES وNIST؛ الفحوصات محدودة / Selected workflow ideas only</span>
+        </div>
+      </div>
+
+      <!-- Remote Target Input Row -->
+      <div id="panel-remote-input" class="input-action-row">
+        <input type="text" id="target-url" class="text-input" placeholder="https://example.com" value="https://example.com">
+        <button id="btn-start-audit" class="btn btn-primary">
+          <span id="txt-btn-start">بدء الفحص المنهجي الشامل</span>
+        </button>
+      </div>
+
+      <!-- Enterprise Advanced Scan Options Collapsible -->
+      <details class="card" style="margin-top: 10px; padding: 10px 14px; background: rgba(15, 23, 42, 0.4); border: 1px solid var(--border-color);">
+        <summary style="cursor: pointer; font-size: 11.5px; font-weight: 700; color: var(--accent-primary);">
+          ⚙️ خيارات الفحص المتقدم: المصادقة (Authenticated Scanning) واستيراد مواصفات APIs (OpenAPI / Postman / GraphQL)
+        </summary>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 12px; font-size: 11px;">
+          <label style="grid-column: 1 / -1;">
+            <input type="checkbox" id="allow-internal-targets">
+            السماح صراحةً بفحص عنوان داخلي/خاص تملكه (معطل افتراضيًا)
+          </label>
+          <!-- Auth Section -->
+          <div style="background: rgba(30, 41, 59, 0.5); padding: 10px; border-radius: 6px; border: 1px solid var(--border-color);">
+            <strong style="color: var(--text-primary); display: block; margin-bottom: 6px;">🔐 نمط المصادقة (Authenticated Session):</strong>
+            <select id="auth-type-select" class="text-input" style="padding: 4px 8px; font-size: 11px; margin-bottom: 8px;">
+              <option value="none">بدون مصادقة (Public Scanning)</option>
+              <option value="bearer">رمز تفويض (JWT / Bearer Token)</option>
+              <option value="cookie">كوكيز الجلسة (Session Cookie)</option>
+              <option value="api_key">مفتاح API مخصص (API Key Header)</option>
+              <option value="form_login">تسجيل دخول آلي بنموذج (Auto Form Login)</option>
+            </select>
+
+            <div id="auth-bearer-box" style="display: none; margin-bottom: 6px;">
+              <input type="text" id="auth-token-input" class="text-input" placeholder="Bearer eyJhbGciOi..." style="font-size: 11px; font-family: monospace;">
+            </div>
+            <div id="auth-cookie-box" style="display: none; margin-bottom: 6px;">
+              <input type="text" id="auth-cookie-input" class="text-input" placeholder="PHPSESSID=...; session=..." style="font-size: 11px; font-family: monospace;">
+            </div>
+            <div id="auth-apikey-box" style="display: none; margin-bottom: 6px;">
+              <input type="text" id="auth-apikey-input" class="text-input" placeholder="X-API-Key: secret_123" style="font-size: 11px; font-family: monospace;">
+            </div>
+            <div id="auth-form-box" style="display: none;">
+              <input type="text" id="auth-login-url" class="text-input" placeholder="URL: https://example.com/login" style="font-size: 11px; margin-bottom: 4px;">
+              <input type="text" id="auth-login-user" class="text-input" placeholder="Username / Email" style="font-size: 11px; margin-bottom: 4px;">
+              <input type="password" id="auth-login-pass" class="text-input" placeholder="Password" style="font-size: 11px;">
+            </div>
+            <div style="margin-top: 10px;">
+              <strong style="color: var(--text-primary); display: block; margin-bottom: 6px;">اختبار IDOR بحساب ثانٍ (اختياري):</strong>
+              <input type="url" id="secondary-resource-url" class="text-input" placeholder="URL لمورد يملكه الحساب الثاني" autocomplete="off" style="font-size: 11px; margin-bottom: 4px;">
+              <textarea id="secondary-auth-headers" class="text-input" rows="2" placeholder='{"Authorization":"Bearer ..."}' autocomplete="off" spellcheck="false" style="font-size: 10px; font-family: monospace;"></textarea>
+              <small>لا تُحفظ بيانات الاعتماد. يجب أن يكون المورد على نفس أصل الهدف وأن يخص حسابًا مستقلًا.</small>
+            </div>
+          </div>
+
+          <!-- API Import Section -->
+          <div style="background: rgba(30, 41, 59, 0.5); padding: 10px; border-radius: 6px; border: 1px solid var(--border-color);">
+            <strong style="color: var(--text-primary); display: block; margin-bottom: 6px;">📄 استيراد مواصفات APIs (OpenAPI / Postman / GraphQL):</strong>
+            <textarea id="api-spec-content" class="text-input" rows="4" placeholder="الصق كود مواصفات الـ API (JSON أو YAML أو GraphQL) هنا لفحص نقاط النهاية والحمولات آلياً..." style="font-size: 10.5px; font-family: monospace; resize: vertical;"></textarea>
+          </div>
+        </div>
+      </details>
+
+      <!-- Local File Upload Row -->
+      <div id="panel-local-input" style="display: none;">
+        <div class="dropzone" id="file-dropzone">
+          <input type="file" id="local-file-input" style="display: none;" accept=".zip,.tar,.gz,.apk,.deb,.py,.js,.ts,.php,.json,.xml,.env,.config">
+          <div class="dropzone-label" id="lbl-dropzone">انقر لاختيار حزمة أو كود مصدري للفحص المحلي (.zip, .apk, .deb, source files)</div>
+          <div class="dropzone-help" id="lbl-dropzone-help">فحوصات ساكنة محلية للشفرة والإعدادات؛ التغطية محدودة</div>
+          <div id="selected-file-name" class="file-chosen-text" style="display: none;"></div>
+        </div>
+        <div style="margin-top: 10px; display: flex; justify-content: flex-end;">
+          <button id="btn-upload-audit" class="btn btn-primary" disabled>
+            <span id="txt-btn-upload">بدء فحص الحزمة المرفوعة</span>
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Workflow overview; backend does not report per-stage progress -->
+    <section class="card" style="padding: 12px 16px;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+        <span style="font-weight: 700; font-size: 12px;" id="lbl-ptes-title">خطوات سير العمل (لا يعرض تقدمًا حيًا لكل خطوة):</span>
+        <span id="scan-status-text" style="font-size: 11px; color: var(--text-muted);">بانتظار إشارة البدء...</span>
+      </div>
+      <div class="ptes-timeline">
+        <div class="ptes-phase-item" id="ptes-1">1. تحديد الهدف والاتصال</div>
+        <div class="ptes-phase-item" id="ptes-2">2. مراجعة الترويسات والجلسات</div>
+        <div class="ptes-phase-item" id="ptes-3">3. استكشاف المسارات والمدخلات</div>
+        <div class="ptes-phase-item" id="ptes-4">4. اختيار فحوصات محددة</div>
+        <div class="ptes-phase-item" id="ptes-5">5. إرسال طلبات تحقق نشطة</div>
+        <div class="ptes-phase-item" id="ptes-6">6. تجميع النتائج المتاحة</div>
+        <div class="ptes-phase-item" id="ptes-7">7. حفظ التقرير</div>
+      </div>
+    </section>
+
+    <!-- Metrics Grid (4 Key Enterprise Cards) -->
+    <section class="metrics-grid">
+      <div class="metric-card">
+        <div class="metric-label" id="lbl-metric-risk">مؤشر المخاطر التجميعي (Baseera، 0-10)</div>
+        <div class="metric-value" id="val-risk" style="color: var(--accent-danger);">غير مُقيّم</div>
+        <div class="metric-sub" id="sub-metric-risk">مؤشر داخلي وليس درجة CVSS</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-label" id="lbl-metric-vulns">النتائج التي أعادها الفحص</div>
+        <div class="metric-value" id="val-vulns" style="color: var(--accent-purple);">غير متاح</div>
+        <div class="metric-sub" id="sub-metric-vulns">النتائج تعتمد على أدلة الفحص ولا تضمن خلو الإنذارات الكاذبة</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-label" id="lbl-metric-compliance">نسبة الامتثال للضوابط المفحوصة (Tested Scope)</div>
+        <div class="metric-value" id="val-compliance" style="color: var(--accent-success);">بانتظار الفحص</div>
+        <div class="metric-sub" id="sub-metric-compliance">بناءً على 12 ضابطاً أمنياً مفحوصاً</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-label" id="lbl-metric-time">زمن الفحص والمعالجة</div>
+        <div class="metric-value" id="val-time" style="color: var(--accent-info);">غير متاح</div>
+        <div class="metric-sub" id="sub-metric-time">الزمن المقاس لهذه الجولة</div>
+      </div>
+    </section>
+
+    <!-- Standards Compliance Gauges & Risk Prioritization Matrix -->
+    <section class="analytics-row">
+      <!-- Left: Standards Compliance -->
+      <div class="card" style="margin-bottom: 0;">
+        <div class="card-header">
+          <div>
+            <div class="card-title" id="lbl-compliance-header">نسب الامتثال للضوابط الأمنية المفحوصة (Tested Scope Compliance)</div>
+            <div class="card-subtitle" id="sub-compliance-header">تقييم الامتثال الفعلي بناءً على نتائج فحص واختبار الضوابط المحددة</div>
+          </div>
+        </div>
+
+        <div class="progress-group">
+          <div class="progress-meta">
+            <span>OWASP ASVS Level 1 (Opportunistic Verification)</span>
+            <span id="txt-asvs-l1">بانتظار الفحص</span>
+          </div>
+          <div class="progress-track">
+            <div id="bar-asvs-l1" class="progress-fill" style="width: 0%; background-color: var(--accent-success);"></div>
+          </div>
+        </div>
+
+        <div class="progress-group">
+          <div class="progress-meta">
+            <span>OWASP ASVS Level 2 (Standard Enterprise Applications)</span>
+            <span id="txt-asvs-l2">بانتظار الفحص</span>
+          </div>
+          <div class="progress-track">
+            <div id="bar-asvs-l2" class="progress-fill" style="width: 0%; background-color: var(--accent-primary);"></div>
+          </div>
+        </div>
+
+        <div class="progress-group">
+          <div class="progress-meta">
+            <span>CIS Controls v8 Benchmarks</span>
+            <span id="txt-cis">بانتظار الفحص</span>
+          </div>
+          <div class="progress-track">
+            <div id="bar-cis" class="progress-fill" style="width: 0%; background-color: var(--accent-purple);"></div>
+          </div>
+        </div>
+
+        <div class="progress-group">
+          <div class="progress-meta">
+            <span>NIST SP 800-53 Security Controls</span>
+            <span id="txt-nist">بانتظار الفحص</span>
+          </div>
+          <div class="progress-track">
+            <div id="bar-nist" class="progress-fill" style="width: 0%; background-color: var(--accent-warning);"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Right: Risk-Based Prioritization Matrix -->
+      <div class="card" style="margin-bottom: 0;">
+        <div class="card-header">
+          <div>
+            <div class="card-title" id="lbl-risk-matrix-header">مصفوفة إدارة المخاطر وتحديد الأولويات (Risk-Based Prioritization)</div>
+            <div class="card-subtitle">CVSS للخطورة؛ EPSS ومواءمة MITRE غير متاحتين دون بيانات موثقة</div>
+          </div>
+        </div>
+        <div id="risk-matrix-summary" style="font-size: 12px; color: var(--text-secondary); line-height: 1.7; min-height: 110px;">
+          لا توجد نتائج بعد. لا تُحسب EPSS أو مواءمة MITRE ما لم تتوفر بيانات موثقة.
+        </div>
+      </div>
+    </section>
+
+    <!-- Adversarial Multi-Vector Attacks Panel -->
+    <section class="card" id="ai-attacks-panel" style="display: none; margin-top: 16px;">
+      <div class="card-header">
+        <div>
+          <div class="card-title" id="lbl-attacks-header">مصفوفة الهجمات المنفذة حياً (Targeted Adversarial Attacks Execution)</div>
+          <div class="card-subtitle" id="lbl-attacks-sub">Active live HTTP verification across multi-vector adversarial tactics</div>
+        </div>
+        <span id="ai-model-badge" class="code-pill">Model: Baseera Attack Strategist</span>
+      </div>
+      <div id="ai-attacks-list" class="attacks-grid"></div>
+    </section>
+
+    <!-- Terminal Output Window -->
+    <section class="card" style="padding: 12px 16px; margin-top: 16px;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+        <span style="font-weight: 700; font-size: 12px; color: var(--text-secondary);" id="lbl-terminal-header">سجل العمليات والاستدلال اللحظي (Terminal Output):</span>
+        <button id="btn-clear-terminal" class="btn-toggle" style="padding: 2px 8px; font-size: 10.5px;">مسح السجل</button>
+      </div>
+      <div class="terminal-window" id="terminal-logs">
+        <div class="terminal-line"><span class="terminal-time">[00:00:00]</span> <span class="terminal-tag-info">[INIT]</span> Baseera Sec local scanner loaded. Select an authorized target.</div>
+      </div>
+    </section>
+
+    <!-- Comprehensive Vulnerability Inventory Table -->
+    <section class="card" style="margin-top: 16px;">
+      <div class="card-header">
+        <div>
+          <div class="card-title" id="lbl-vulns-header">النتائج المسجلة</div>
+          <div class="card-subtitle">قد تكون بيانات CVE وEPSS وتصنيف الضوابط غير متاحة عند غياب مصدر موثوق</div>
+        </div>
+      </div>
+      <div class="table-wrapper">
+        <table>
+          <thead>
+            <tr>
+              <th id="th-id">المعرّف</th>
+              <th id="th-title">عنوان الثغرة والتصنيف</th>
+              <th id="th-cvss">CVSS v3.1</th>
+              <th id="th-epss">EPSS (الاحتمالية)</th>
+              <th id="th-cwe">CWE / CVE</th>
+              <th id="th-mitre">MITRE ATT&CK</th>
+              <th id="th-compliance">OWASP / CIS</th>
+              <th id="th-poc">دليل الإثبات العملي (PoC)</th>
+              <th id="th-remediation">خطة المعالجة والترقيع</th>
+            </tr>
+          </thead>
+          <tbody id="vulns-table-body">
+            <tr>
+              <td colspan="9" style="text-align: center; color: var(--text-muted); padding: 30px;" id="td-empty-table">
+                لم يبدأ الفحص بعد. حدد النطاق واضغط "بدء الفحص المنهجي الشامل".
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- Scan Summary Card -->
+    <section class="card" id="ai-summary-card" style="display: none; border-color: var(--accent-primary);">
+      <div class="card-header">
+        <div class="card-title" id="lbl-summary-header">ملخص الفحص</div>
+      </div>
+      <div id="ai-summary-content" style="font-size: 12.5px; color: var(--text-primary); line-height: 1.8; white-space: pre-wrap;">
+      </div>
+    </section>
+
+  </main>
+
+  <!-- HTML Report In-App Inspection Modal -->
+  <div class="modal-overlay" id="report-modal" style="display: none;">
+    <div class="modal-window">
+      <div class="modal-header">
+        <span style="font-weight: 700; font-size: 13px;" id="lbl-modal-title">معاينة التقرير النهائي | Baseera VAPT Report</span>
+        <button id="btn-close-modal" class="btn-toggle">إغلاق</button>
+      </div>
+      <div class="modal-body">
+        <iframe id="report-iframe" src="about:blank"></iframe>
+      </div>
+    </div>
+  </div>
+
+  <!-- Baseera Sec synthetic benchmark modal -->
+  <div class="modal-overlay" id="benchmark-modal" style="display: none;">
+    <div class="modal-window" style="max-width: 950px;">
+      <div class="modal-header" style="background: rgba(14, 165, 233, 0.1); border-bottom: 1px solid rgba(14, 165, 233, 0.3);">
+        <div style="display: flex; align-items: center; gap: 10px;">
+          <span style="font-weight: 800; font-size: 14px; color: #38bdf8;">نتائج مجموعة الاختبار الاصطناعية الخاصة بـ Baseera Sec</span>
+        </div>
+        <div style="display: flex; gap: 8px;">
+          <button id="btn-run-live-benchmark" class="btn btn-primary" style="padding: 4px 12px; font-size: 11px;">إعادة تشغيل الفحص المعياري حياً</button>
+          <button id="btn-close-benchmark-modal" class="btn-toggle">إغلاق</button>
+        </div>
+      </div>
+      <div class="modal-body" style="padding: 20px; overflow-y: auto;">
+        <!-- Metrics Grid -->
+        <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 20px;">
+          <div class="metric-box" style="border-top-color: #38bdf8;">
+            <div class="metric-label">Synthetic suite score (TPR - FPR; not an official score)</div>
+            <div class="metric-value" id="bm-score" style="color: #38bdf8;">غير متاح</div>
+            <div style="font-size: 10px; color: var(--text-muted);">المعادلة: TPR% - FPR%</div>
+          </div>
+          <div class="metric-box" style="border-top-color: #10b981;">
+            <div class="metric-label">True Positive Rate (Recall)</div>
+            <div class="metric-value" id="bm-tpr" style="color: #10b981;">غير متاح</div>
+            <div style="font-size: 10px; color: var(--text-muted);" id="bm-tp-ratio">غير متاح</div>
+          </div>
+          <div class="metric-box" style="border-top-color: #ef4444;">
+            <div class="metric-label">False Positive Rate (FPR)</div>
+            <div class="metric-value" id="bm-fpr" style="color: #ef4444;">غير متاح</div>
+            <div style="font-size: 10px; color: var(--text-muted);" id="bm-fp-ratio">غير متاح</div>
+          </div>
+          <div class="metric-box" style="border-top-color: #8b5cf6;">
+            <div class="metric-label">Overall Accuracy</div>
+            <div class="metric-value" id="bm-acc" style="color: #8b5cf6;">غير متاح</div>
+            <div style="font-size: 10px; color: var(--text-muted);">دقة القرار الإجمالي</div>
+          </div>
+        </div>
+        <div id="benchmark-status" role="status" style="font-size: 11px; color: var(--text-muted); margin-bottom: 12px;"></div>
+
+        <!-- Breakdown Table -->
+        <h4 style="margin: 0 0 10px 0; font-size: 13px; color: var(--text-primary);">تفصيل النتائج حسب فئات مجموعة الاختبار الاصطناعية:</h4>
+        <table class="table-vapt" style="margin-bottom: 20px;">
+          <thead>
+            <tr>
+              <th>فئة الثغرة (CWE Category)</th>
+              <th>الحالات الحقيقية (TP)</th>
+              <th>الحالات المحمية (TN)</th>
+              <th>الإنذارات الكاذبة (FP)</th>
+              <th>الثغرات المفوتة (FN)</th>
+              <th>نسبة الدقة</th>
+            </tr>
+          </thead>
+          <tbody id="bm-table-body">
+            <!-- Dynamic Category Rows -->
+          </tbody>
+        </table>
+
+        <!-- Summary Note -->
+        <div style="background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.3); border-radius: 6px; padding: 12px; font-size: 11.5px; color: #10b981; line-height: 1.6;">
+          هذه مجموعة اختبار اصطناعية داخلية وليست OWASP Benchmark الرسمي. النتائج تقيس الحالات الموجودة في هذا الاختبار فقط ولا تثبت خلو الأداة من الإنذارات الكاذبة أو صلاحيتها الإنتاجية.
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="js/dashboard.js?v=20261122_v4"></script>
+</body>
+</html>
