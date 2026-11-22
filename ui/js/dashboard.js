@@ -78,8 +78,8 @@ document.addEventListener("DOMContentLoaded", () => {
   // =========================================================================
   const i18n = {
     ar: {
-      brandTitle: "منصة بصيرة للفحص الأمني المحلي | Baseera Sec",
-      brandSubtitle: "ماسح أمني محلي لتطبيقات الويب والحزم",
+      brandTitle: "منصة بصيرة للفحص الأمني | BaceeraSec",
+      brandSubtitle: "Autonomous Cognitive VAPT & AI Scanner | Team 2Bit",
       lblLocalModels: "النماذج المحلية:",
       btnRefreshModels: "تحديث الحالة",
       themeToggleLight: "الوضع الفاتح",
@@ -142,8 +142,8 @@ document.addEventListener("DOMContentLoaded", () => {
       btnCloseModal: "إغلاق"
     },
     en: {
-      brandTitle: "Baseera Sec | Local Security Scanner",
-      brandSubtitle: "Local web and package security scanner",
+      brandTitle: "BaceeraSec — Cognitive VAPT Platform",
+      brandSubtitle: "Autonomous Web & Package Security Scanner | Team 2Bit",
       lblLocalModels: "Local models:",
       btnRefreshModels: "Refresh status",
       themeToggleLight: "Light Mode",
