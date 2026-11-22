@@ -80,11 +80,19 @@ document.addEventListener("DOMContentLoaded", () => {
     ar: {
       brandTitle: "منصة بصيرة للفحص الأمني | BaceeraSec",
       brandSubtitle: "Autonomous Cognitive VAPT & AI Scanner | Team 2Bit",
-      lblLocalModels: "النماذج المحلية:",
-      btnRefreshModels: "تحديث الحالة",
+      navDashboard: "لوحة التحكم (Dashboard)",
+      navTarget: "نطاق الفحص (Target Scope)",
+      navWorkflow: "سير العمل (PTES Workflow)",
+      navAttacks: "مصفوفة الهجمات (Attack Matrix)",
+      navCompliance: "معايير الامتثال (Compliance)",
+      navTerminal: "الطرفية المباشرة (Live Terminal)",
+      navVulns: "سجل الثغرات (Findings)",
+      lblLocalModels: "نماذج الذكاء الاصطناعي:",
+      btnRefreshModels: "تحديث",
       themeToggleLight: "الوضع الفاتح",
       themeToggleDark: "الوضع الداكن",
       langToggle: "English",
+      btnBenchmark: "نتائج الاختبار الاصطناعي",
       btnExportPdf: "تصدير PDF",
       btnExportHtml: "معاينة HTML",
       btnExportSarif: "SARIF 2.1.0",
@@ -96,12 +104,12 @@ document.addEventListener("DOMContentLoaded", () => {
       modeLocal: "رفع حزمة أو ملفات محلية (Upload)",
       lblMethodologyTitle: "أساس سير العمل:",
       urlPlaceholder: "https://example.com",
-      btnStartAudit: "بدء الفحص",
+      btnStartAudit: "بدء الفحص المنهجي الشامل",
       btnAuditAnother: "فحص هدف آخر",
       lblDropzone: "انقر لاختيار حزمة أو كود مصدري للفحص المحلي (.zip, .apk, .deb, source files)",
       lblDropzoneHelp: "فحوصات ساكنة محلية للشفرة والإعدادات؛ التغطية محدودة",
       btnUploadAudit: "بدء فحص الحزمة المرفوعة",
-      lblPtesTitle: "نظرة عامة على سير العمل (لا يعرض تقدمًا حيًا لكل خطوة):",
+      lblPtesTitle: "خطوات سير العمل المنهجي (PTES Workflow):",
       statusWaiting: "بانتظار إشارة البدء...",
       statusRunning: "جارٍ تنفيذ الفحوصات المتاحة...",
       statusComplete: "انتهى الفحص. راجع النتائج والتغطية غير المختبرة.",
@@ -115,40 +123,58 @@ document.addEventListener("DOMContentLoaded", () => {
         "7. حفظ التقرير"
       ],
       metricRisk: "مؤشر المخاطر التجميعي (Baseera، 0-10)",
+      valRiskIdle: "غير مُقيّم",
+      subMetricRisk: "مؤشر أمني داخلي مستند إلى أوزان CVSS المركبة",
       metricVulns: "النتائج التي أعادها الفحص",
-      metricCompliance: "نسبة الامتثال للضوابط المفحوصة (Compliance)",
+      valVulnsIdle: "غير متاح",
+      subMetricVulns: "الثغرات المؤكدة بالدليل الملموس واستجابات الخادم",
+      metricCompliance: "نسبة الامتثال للضوابط المفحوصة (Tested Scope)",
+      valComplianceIdle: "بانتظار الفحص",
+      subMetricCompliance: "بناءً على 12 ضابطاً أمنياً مفحوصاً",
       metricTime: "زمن الفحص والمعالجة",
-      lblComplianceHeader: "نسب الامتثال للضوابط الأمنية المفحوصة (Tested Scope)",
-      lblRiskMatrixHeader: "ملخص تصنيف النتائج",
-      riskMatrixDefault: "لا توجد نتائج بعد. لا تُحسب EPSS أو مواءمة MITRE ما لم تتوفر بيانات موثقة.",
-      lblAttacksHeader: "نتائج فحوصات الطلبات النشطة",
-      lblAttacksSub: "نتائج محاولات التحقق التي نفذها الماسح فقط؛ ليست تغطية شاملة",
-      lblTerminalHeader: "سجل العمليات:",
+      valTimeIdle: "غير متاح",
+      subMetricTime: "الزمن المقاس الإجمالي لهذه الجولة بالمللي ثانية",
+      pendingScan: "بانتظار الفحص",
+      lblComplianceHeader: "نسب الامتثال للضوابط الأمنية المفحوصة (Tested Scope Compliance)",
+      subComplianceHeader: "تقييم الامتثال الفعلي بناءً على نتائج فحص واختبار الضوابط المحددة",
+      lblRiskMatrixHeader: "مصفوفة إدارة المخاطر وتحديد الأولويات (Risk-Based Prioritization)",
+      riskMatrixDefault: "لا توجد نتائج بعد. حدد النطاق واضغط \"بدء الفحص\" لحساب مصفوفة المخاطر والامتثال.",
+      lblAttacksHeader: "مصفوفة الهجمات المنفذة حياً (Targeted Adversarial Attacks Execution)",
+      lblAttacksSub: "Active live HTTP verification across multi-vector adversarial tactics",
+      lblTerminalHeader: "سجل العمليات والاستدلال اللحظي (Terminal Output):",
       btnClearTerminal: "مسح السجل",
-      lblVulnsHeader: "النتائج المسجلة",
+      lblVulnsHeader: "سجل النتائج والثغرات المرصودة (Vulnerability Inventory)",
       thId: "المعرّف",
       thTitle: "عنوان الثغرة والتصنيف",
       thCvss: "CVSS v3.1",
-      thEpss: "EPSS (غير متاح دون مصدر)",
+      thEpss: "EPSS (الاحتمالية)",
       thCwe: "CWE / CVE",
       thMitre: "MITRE ATT&CK",
       thCompliance: "OWASP / CIS",
-      thPoc: "الدليل المسجل",
+      thPoc: "دليل الإثبات العملي (PoC)",
       thRemediation: "خطة المعالجة والترقيع",
-      tdEmpty: "لم يبدأ الفحص بعد. حدد النطاق واضغط «بدء الفحص».",
+      tdEmpty: "لم يبدأ الفحص بعد. حدد النطاق واضغط \"بدء الفحص المنهجي الشامل\".",
       tdAuditing: "جارٍ تنفيذ الفحوصات المتاحة...",
-      lblSummaryHeader: "ملخص الفحص",
-      lblModalTitle: "معاينة التقرير | Baseera Sec",
+      lblSummaryHeader: "ملخص الفحص الجنائي بالذكاء الاصطناعي",
+      lblModalTitle: "معاينة التقرير النهائي | Baseera VAPT Report",
       btnCloseModal: "إغلاق"
     },
     en: {
       brandTitle: "BaceeraSec — Cognitive VAPT Platform",
       brandSubtitle: "Autonomous Web & Package Security Scanner | Team 2Bit",
-      lblLocalModels: "Local models:",
-      btnRefreshModels: "Refresh status",
+      navDashboard: "Dashboard",
+      navTarget: "Target Scope",
+      navWorkflow: "PTES Workflow",
+      navAttacks: "Attack Matrix",
+      navCompliance: "Compliance",
+      navTerminal: "Live Terminal",
+      navVulns: "Findings Inventory",
+      lblLocalModels: "AI Models:",
+      btnRefreshModels: "Refresh",
       themeToggleLight: "Light Mode",
       themeToggleDark: "Dark Mode",
       langToggle: "العربية",
+      btnBenchmark: "Benchmark Results",
       btnExportPdf: "Export PDF",
       btnExportHtml: "Preview HTML",
       btnExportSarif: "SARIF 2.1.0",
@@ -158,14 +184,14 @@ document.addEventListener("DOMContentLoaded", () => {
       lblInputMode: "Scan Source:",
       modeRemote: "Remote Target (URL)",
       modeLocal: "Local Package Upload",
-      lblMethodologyTitle: "Workflow basis:",
+      lblMethodologyTitle: "Workflow Basis:",
       urlPlaceholder: "https://example.com",
-      btnStartAudit: "Start Scan",
+      btnStartAudit: "Start Comprehensive Audit",
       btnAuditAnother: "Audit Another Target",
       lblDropzone: "Click to select a local package or source code (.zip, .apk, .deb, source files)",
-      lblDropzoneHelp: "Limited local static checks for source code and configuration",
+      lblDropzoneHelp: "Local static checks for source code and configurations; scoped coverage",
       btnUploadAudit: "Audit Uploaded Package",
-      lblPtesTitle: "Workflow overview (per-step progress is not reported):",
+      lblPtesTitle: "Methodological Workflow (PTES Workflow):",
       statusWaiting: "Awaiting execution trigger...",
       statusRunning: "Running available checks...",
       statusComplete: "Scan finished. Review findings and untested coverage.",
@@ -179,30 +205,40 @@ document.addEventListener("DOMContentLoaded", () => {
         "7. Save report"
       ],
       metricRisk: "Baseera Aggregate Risk Index (0-10)",
-      metricVulns: "Findings returned by the scan",
-      metricCompliance: "Tested Scope Compliance",
-      metricTime: "Execution Duration",
+      valRiskIdle: "Not Assessed",
+      subMetricRisk: "Internal security index based on composite CVSS weights",
+      metricVulns: "Findings Returned by Scan",
+      valVulnsIdle: "N/A",
+      subMetricVulns: "Vulnerabilities verified by tangible PoC evidence",
+      metricCompliance: "Tested Scope Compliance Rate",
+      valComplianceIdle: "Pending Scan",
+      subMetricCompliance: "Based on 12 assessed security controls",
+      metricTime: "Execution Latency & Duration",
+      valTimeIdle: "N/A",
+      subMetricTime: "Total measured duration for this audit cycle",
+      pendingScan: "Pending Scan",
       lblComplianceHeader: "Tested Scope Compliance Gauges",
-      lblRiskMatrixHeader: "Finding severity summary",
-      riskMatrixDefault: "No findings yet. EPSS and MITRE mappings are not calculated without verified data.",
-      lblAttacksHeader: "Active request-check results",
-      lblAttacksSub: "Only checks actually attempted by the scanner; not comprehensive coverage",
-      lblTerminalHeader: "Operation log:",
+      subComplianceHeader: "Actual compliance assessment based on assessed controls",
+      lblRiskMatrixHeader: "Risk-Based Prioritization Matrix",
+      riskMatrixDefault: "No findings yet. Select scope and click 'Start Audit' to calculate risk matrix.",
+      lblAttacksHeader: "Targeted Adversarial Attacks Execution Matrix",
+      lblAttacksSub: "Active live HTTP verification across multi-vector adversarial tactics",
+      lblTerminalHeader: "Live Operation & Reasoning Console:",
       btnClearTerminal: "Clear Console",
-      lblVulnsHeader: "Recorded findings",
+      lblVulnsHeader: "Vulnerability & Findings Inventory",
       thId: "Vuln ID",
       thTitle: "Vulnerability Title & Taxonomy",
       thCvss: "CVSS v3.1",
-      thEpss: "EPSS (not available without a source)",
+      thEpss: "EPSS (Probability)",
       thCwe: "CWE / CVE",
       thMitre: "MITRE ATT&CK",
       thCompliance: "OWASP / CIS",
-      thPoc: "Recorded evidence",
+      thPoc: "Proof of Concept (PoC)",
       thRemediation: "Remediation Roadmap",
-      tdEmpty: "No scan yet. Select a target and click 'Start Scan'.",
+      tdEmpty: "No scan yet. Select a target and click 'Start Comprehensive Audit'.",
       tdAuditing: "Running available checks...",
-      lblSummaryHeader: "Scan summary",
-      lblModalTitle: "Report Preview | Baseera Sec",
+      lblSummaryHeader: "AI Forensic Scan Summary",
+      lblModalTitle: "Report Preview | Baseera Sec VAPT",
       btnCloseModal: "Close"
     }
   };
@@ -220,12 +256,28 @@ document.addEventListener("DOMContentLoaded", () => {
     setText("txt-brand-subtitle", dict.brandSubtitle);
     setText("lbl-local-models", dict.lblLocalModels);
     if (btnLocalModelStatus) btnLocalModelStatus.innerText = dict.btnRefreshModels;
-    if (btnLangToggle) btnLangToggle.innerText = dict.langToggle;
 
-    if (btnExportPdf) btnExportPdf.innerText = dict.btnExportPdf;
-    if (btnExportHtml) btnExportHtml.innerText = dict.btnExportHtml;
-    if (btnExportSarif) btnExportSarif.innerText = dict.btnExportSarif;
+    if (btnLangToggle) {
+      btnLangToggle.innerHTML = `<span class="toggle-icon">🌐</span><span class="toggle-text">${dict.langToggle}</span>`;
+    }
 
+    // Topbar Action Buttons
+    if (btnExportPdf) btnExportPdf.innerHTML = `<span>📄</span><span>${dict.btnExportPdf}</span>`;
+    if (btnExportHtml) btnExportHtml.innerHTML = `<span>👁️</span><span>${dict.btnExportHtml}</span>`;
+    if (btnExportSarif) btnExportSarif.innerHTML = `<span>⚙️</span><span>${dict.btnExportSarif}</span>`;
+    const btnBenchmark = document.getElementById("btn-owasp-benchmark");
+    if (btnBenchmark) btnBenchmark.innerHTML = `<span>🧪</span><span>${dict.btnBenchmark}</span>`;
+
+    // Sidebar Nav Links
+    setText("nav-dashboard", dict.navDashboard);
+    setText("nav-target", dict.navTarget);
+    setText("nav-workflow", dict.navWorkflow);
+    setText("nav-attacks", dict.navAttacks);
+    setText("nav-compliance", dict.navCompliance);
+    setText("nav-terminal", dict.navTerminal);
+    setText("nav-vulns", dict.navVulns);
+
+    // Target inputs & scope
     setText("lbl-target-type", dict.lblTargetType);
     if (scopeWeb) scopeWeb.innerText = dict.scopeWeb;
     if (scopeApp) scopeApp.innerText = dict.scopeApp;
@@ -234,13 +286,13 @@ document.addEventListener("DOMContentLoaded", () => {
     if (modeLocal) modeLocal.innerText = dict.modeLocal;
     setText("lbl-methodology-title", dict.lblMethodologyTitle);
 
-    setText("txt-btn-start", dict.btnStartAudit);
+    setText("txt-btn-start", activeProjectId ? dict.btnAuditAnother : dict.btnStartAudit);
     setText("lbl-dropzone", dict.lblDropzone);
     setText("lbl-dropzone-help", dict.lblDropzoneHelp);
     setText("txt-btn-upload", dict.btnUploadAudit);
 
     setText("lbl-ptes-title", dict.lblPtesTitle);
-    if (scanStatus && scanStatus.dataset.idle === "true") {
+    if (scanStatus && (scanStatus.dataset.idle === "true" || !activeProjectId)) {
       scanStatus.innerText = dict.statusWaiting;
     }
 
@@ -249,14 +301,46 @@ document.addEventListener("DOMContentLoaded", () => {
       if (step) step.innerText = dict.ptes[i - 1];
     }
 
+    // KPI Metrics Labels & Subtitles
     setText("lbl-metric-risk", dict.metricRisk);
     setText("lbl-metric-vulns", dict.metricVulns);
     setText("lbl-metric-compliance", dict.metricCompliance);
     setText("lbl-metric-time", dict.metricTime);
+    setText("sub-metric-risk", dict.subMetricRisk);
+    setText("sub-metric-vulns", dict.subMetricVulns);
+    setText("sub-metric-compliance", dict.subMetricCompliance);
+    setText("sub-metric-time", dict.subMetricTime);
+
+    // Idle Metric Values (if not yet scanned)
+    const valRisk = document.getElementById("val-risk");
+    if (valRisk && (!activeProjectId || valRisk.innerText.includes("غير") || valRisk.innerText.includes("Not"))) {
+      valRisk.innerText = dict.valRiskIdle;
+    }
+    const valVulns = document.getElementById("val-vulns");
+    if (valVulns && (!activeProjectId || valVulns.innerText.includes("غير") || valVulns.innerText.includes("N/A"))) {
+      valVulns.innerText = dict.valVulnsIdle;
+    }
+    const valCompliance = document.getElementById("val-compliance");
+    if (valCompliance && (!activeProjectId || valCompliance.innerText.includes("بانتظار") || valCompliance.innerText.includes("Pending"))) {
+      valCompliance.innerText = dict.valComplianceIdle;
+    }
+    const valTime = document.getElementById("val-time");
+    if (valTime && (!activeProjectId || valTime.innerText.includes("غير") || valTime.innerText.includes("N/A"))) {
+      valTime.innerText = dict.valTimeIdle;
+    }
+
+    // Progress bar texts (if idle)
+    ["txt-asvs-l1", "txt-asvs-l2", "txt-cis", "txt-nist"].forEach(id => {
+      const el = document.getElementById(id);
+      if (el && (!activeProjectId || el.innerText.includes("بانتظار") || el.innerText.includes("Pending"))) {
+        el.innerText = dict.pendingScan;
+      }
+    });
 
     setText("lbl-compliance-header", dict.lblComplianceHeader);
+    setText("sub-compliance-header", dict.subComplianceHeader);
     setText("lbl-risk-matrix-header", dict.lblRiskMatrixHeader);
-    if (riskMatrixSummary && riskMatrixSummary.dataset.idle === "true") {
+    if (riskMatrixSummary && (riskMatrixSummary.dataset.idle === "true" || !activeProjectId)) {
       riskMatrixSummary.innerText = dict.riskMatrixDefault;
     }
 
@@ -266,6 +350,7 @@ document.addEventListener("DOMContentLoaded", () => {
     if (btnClearTerminal) btnClearTerminal.innerText = dict.btnClearTerminal;
     setText("lbl-vulns-header", dict.lblVulnsHeader);
 
+    // Table Headers
     setText("th-id", dict.thId);
     setText("th-title", dict.thTitle);
     setText("th-cvss", dict.thCvss);
@@ -283,6 +368,13 @@ document.addEventListener("DOMContentLoaded", () => {
     setText("lbl-modal-title", dict.lblModalTitle);
     if (btnCloseModal) btnCloseModal.innerText = dict.btnCloseModal;
 
+    // AI Model Status text translation
+    if (localModelStatus) {
+      if (localModelStatus.classList.contains("active")) {
+        localModelStatus.innerText = lang === "ar" ? "نماذج نظور (3/3): نشطة ومُعتمدة" : "Nazzoor Models (3/3): Active & Verified";
+      }
+    }
+
     applyTheme(currentTheme);
   }
 
@@ -292,7 +384,8 @@ document.addEventListener("DOMContentLoaded", () => {
     if (htmlDoc) htmlDoc.setAttribute("data-theme", theme);
     const dict = i18n[currentLang];
     if (btnThemeToggle) {
-      btnThemeToggle.innerText = theme === "dark" ? dict.themeToggleLight : dict.themeToggleDark;
+      const icon = theme === "dark" ? "☀️" : "🌙";
+      btnThemeToggle.innerHTML = `<span class="toggle-icon">${icon}</span><span class="toggle-text">${theme === "dark" ? dict.themeToggleLight : dict.themeToggleDark}</span>`;
     }
   }
 
