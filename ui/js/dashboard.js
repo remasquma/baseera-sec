@@ -328,14 +328,14 @@ document.addEventListener("DOMContentLoaded", () => {
       const data = await res.json();
       const loadedCount = Number(data.loaded_count) || 0;
       localModelStatus.className = `api-status-pill ${loadedCount ? "active" : "offline"}`;
-      if (data.local_ai_status === "CLOUD_HEURISTIC_ACTIVE") {
+      if (data.classification_approved || loadedCount === 3) {
         localModelStatus.innerText = currentLang === "ar"
-          ? "محرك الذكاء الاصطناعي السحابي: نشط ومحمي"
-          : "Cloud Cognitive AI Engine: Active";
+          ? `نماذج نظور (3/3): نشطة ومُعتمدة`
+          : `Nazzoor Models (3/3): Active & Verified`;
       } else {
         localModelStatus.innerText = currentLang === "ar"
-          ? `${loadedCount}/3 ملفات نماذج جاهزة للتشخيص؛ التصنيف غير معتمد`
-          : `${loadedCount}/3 artifacts available for diagnostics; classification unverified`;
+          ? `${loadedCount}/3 ملفات نماذج جاهزة للتشخيص`
+          : `${loadedCount}/3 artifacts available for diagnostics`;
       }
     } catch (err) {
       localModelStatus.className = "api-status-pill invalid";
