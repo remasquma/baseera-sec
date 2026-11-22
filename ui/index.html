@@ -7,7 +7,7 @@
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
   <title>BaceeraSec — Autonomous Cognitive VAPT Platform | Team 2Bit</title>
-  <link rel="stylesheet" href="css/cyber.css?v=20261122_v9">
+  <link rel="stylesheet" href="css/cyber.css?v=20261122_v10">
 </head>
 <body>
 
@@ -452,7 +452,13 @@
     <div class="modal-window">
       <div class="modal-header">
         <span style="font-weight: 700; font-size: 13.5px;" id="lbl-modal-title">معاينة التقرير النهائي | Baseera VAPT Report</span>
-        <button id="btn-close-modal" class="btn-toggle">إغلاق</button>
+        <div style="display: flex; gap: 8px;">
+          <button id="btn-modal-print" class="btn-toggle" style="background: var(--accent-primary); color: white; display: flex; align-items: center; gap: 6px;">
+            <span>🖨️</span>
+            <span id="lbl-modal-print">طباعة / حفظ كـ PDF</span>
+          </button>
+          <button id="btn-close-modal" class="btn-toggle">إغلاق</button>
+        </div>
       </div>
       <div class="modal-body">
         <iframe id="report-iframe" src="about:blank"></iframe>
@@ -555,6 +561,6 @@
     });
   </script>
 
-  <script src="js/dashboard.js?v=20261122_v9"></script>
+  <script src="js/dashboard.js?v=20261122_v10"></script>
 </body>
 </html>

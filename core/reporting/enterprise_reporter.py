@@ -215,7 +215,7 @@ class EnterpriseReporter:
 <html dir="{direction}" lang="{lang}">
 <head>
   <meta charset="utf-8">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; font-src 'self';">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; font-src 'self' data:;">
   <title>تقرير فحص واختبار الاختراق - {safe_proj_name}</title>
   <style>
     body {{ font-family: {font_family}; background:#f8fafc; color:#0f172a; margin:0; padding:30px; line-height:1.6; }}
@@ -224,9 +224,30 @@ class EnterpriseReporter:
     .grid-4 {{ display:grid; grid-template-columns:repeat(4, 1fr); gap:15px; margin:20px 0; }}
     .card {{ background:white; border:1px solid #e2e8f0; border-radius:10px; padding:18px; }}
     .section-title {{ font-size:16pt; font-weight:800; border-bottom:2px solid #0284c7; padding-bottom:8px; margin:30px 0 16px 0; }}
+
+    @media print {{
+      body {{ background:#ffffff !important; padding:10px !important; color:#0f172a !important; }}
+      .no-print {{ display:none !important; }}
+      .header {{ background:#0f172a !important; color:white !important; -webkit-print-color-adjust:exact; print-color-adjust:exact; }}
+      .badge {{ -webkit-print-color-adjust:exact; print-color-adjust:exact; }}
+      .card {{ page-break-inside:avoid; break-inside:avoid; border:1px solid #cbd5e1 !important; box-shadow:none !important; -webkit-print-color-adjust:exact; print-color-adjust:exact; }}
+      .section-title {{ page-break-after:avoid; break-after:avoid; }}
+      @page {{ margin: 10mm; size: A4; }}
+    }}
   </style>
 </head>
 <body>
+
+  <!-- شريط التحكم والطباعة العلوي -->
+  <div class="no-print" style="display:flex; justify-content:space-between; align-items:center; background:#0f172a; color:#38bdf8; padding:12px 20px; border-radius:8px; margin-bottom:20px; border:1px solid #1e293b;">
+    <div style="font-size:12px; font-weight:600;">
+      {'منصة بصير BaceeraSec | تقرير فحص واختبار الاختراق المعتمد' if is_ar else 'BaceeraSec Platform | Certified VAPT Security Report'}
+    </div>
+    <button onclick="window.print()" style="background:#0284c7; color:#ffffff; border:none; padding:8px 18px; border-radius:6px; font-weight:bold; font-size:12px; cursor:pointer; display:flex; align-items:center; gap:8px;">
+      <span>🖨️</span>
+      <span>{'طباعة وحفظ كملف PDF' if is_ar else 'Print / Save as PDF'}</span>
+    </button>
+  </div>
 
   <div class="header">
     <span class="badge" style="background:#0284c7;">مشروع {safe_proj_type} | منهجية PTES و NIST SP 800-115</span>

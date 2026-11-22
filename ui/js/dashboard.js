@@ -160,6 +160,7 @@ document.addEventListener("DOMContentLoaded", () => {
       tdAuditing: "جارٍ تنفيذ الفحوصات المتاحة...",
       lblSummaryHeader: "ملخص الفحص الجنائي بالذكاء الاصطناعي",
       lblModalTitle: "معاينة التقرير النهائي | Baseera VAPT Report",
+      btnModalPrint: "طباعة / حفظ كـ PDF",
       btnCloseModal: "إغلاق"
     },
     en: {
@@ -242,6 +243,7 @@ document.addEventListener("DOMContentLoaded", () => {
       tdAuditing: "Running available checks...",
       lblSummaryHeader: "AI Forensic Scan Summary",
       lblModalTitle: "Report Preview | Baseera Sec VAPT",
+      btnModalPrint: "Print / Save as PDF",
       btnCloseModal: "Close"
     }
   };
@@ -369,6 +371,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     setText("lbl-summary-header", dict.lblSummaryHeader);
     setText("lbl-modal-title", dict.lblModalTitle);
+    setText("lbl-modal-print", dict.btnModalPrint);
     if (btnCloseModal) btnCloseModal.innerText = dict.btnCloseModal;
 
     // AI Model Status text translation
@@ -1106,6 +1109,36 @@ document.addEventListener("DOMContentLoaded", () => {
   // =========================================================================
   // 8. Reliable Report Export Handlers (PDF, HTML, SARIF)
   // =========================================================================
+  function triggerBrowserPrintPdf(projId) {
+    const reportUrl = `/api/reports/export/${projId}/html?lang=${currentLang}`;
+    if (reportIframe) {
+      reportIframe.src = reportUrl;
+      if (reportModal) reportModal.style.display = "flex";
+
+      const onIframeLoaded = () => {
+        reportIframe.removeEventListener("load", onIframeLoaded);
+        setTimeout(() => {
+          try {
+            reportIframe.contentWindow.focus();
+            reportIframe.contentWindow.print();
+            log(`[EXPORT] Print-to-PDF dialog triggered. Choose "Save as PDF".`, "success");
+          } catch (e) {
+            log(`[EXPORT] Report preview opened; click the print button in modal.`, "info");
+          }
+        }, 500);
+      };
+
+      reportIframe.addEventListener("load", onIframeLoaded);
+    } else {
+      const w = window.open(reportUrl, "_blank");
+      if (w) {
+        w.onload = () => {
+          setTimeout(() => { w.print(); }, 500);
+        };
+      }
+    }
+  }
+
   async function downloadReportFile(fmt) {
     const projId = activeProjectId || 1;
     log(`[EXPORT] Generating ${fmt.toUpperCase()} report for Project #${projId}...`, "info");
@@ -1114,6 +1147,11 @@ document.addEventListener("DOMContentLoaded", () => {
       const url = `/api/reports/export/${projId}/${fmt}?lang=${currentLang}&download=true`;
       const res = await fetch(url);
       if (!res.ok) {
+        if (fmt === "pdf") {
+          log(`[EXPORT] Cloud server headless PDF engine unavailable. Opening browser print-to-PDF...`, "warn");
+          triggerBrowserPrintPdf(projId);
+          return;
+        }
         throw new Error(`Export failed with HTTP status ${res.status}`);
       }
 
@@ -1131,6 +1169,11 @@ document.addEventListener("DOMContentLoaded", () => {
 
       log(`[REPORT DOWNLOADED] Baseera_VAPT_Report_Proj_${projId}.${ext} saved to disk.`, "success");
     } catch (err) {
+      if (fmt === "pdf") {
+        log(`[EXPORT] Opening browser print-to-PDF engine...`, "warn");
+        triggerBrowserPrintPdf(projId);
+        return;
+      }
       log(`[EXPORT ERROR] Failed to generate ${fmt.toUpperCase()} report: ${err.message}`, "danger");
       alert(currentLang === "ar" ? `فشل تصدير التقرير: ${err.message}` : `Report export failed: ${err.message}`);
     }
@@ -1149,6 +1192,21 @@ document.addEventListener("DOMContentLoaded", () => {
       const projId = activeProjectId || 1;
       if (reportIframe) reportIframe.src = `/api/reports/export/${projId}/html?lang=${currentLang}`;
       if (reportModal) reportModal.style.display = "flex";
+    });
+  }
+
+  const btnModalPrint = document.getElementById("btn-modal-print");
+  if (btnModalPrint) {
+    btnModalPrint.addEventListener("click", () => {
+      if (reportIframe && reportIframe.contentWindow) {
+        try {
+          reportIframe.contentWindow.focus();
+          reportIframe.contentWindow.print();
+        } catch (e) {
+          const projId = activeProjectId || 1;
+          window.open(`/api/reports/export/${projId}/html?lang=${currentLang}`, "_blank");
+        }
+      }
     });
   }
 
