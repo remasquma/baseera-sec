@@ -66,6 +66,9 @@ document.addEventListener("DOMContentLoaded", () => {
   let currentScope = "Web";
   let activeProjectId = null;
   let selectedFile = null;
+  let liveTimerInterval = null;
+  let ptesProgressionInterval = null;
+  let liveScanStartTime = null;
 
   // Safe Helper Function to set text on elements without crashing if missing
   function setText(id, text) {
@@ -531,10 +534,115 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   // =========================================================================
+  // Live Execution Stopwatch Timer & PTES Workflow Progression
+  // =========================================================================
+  function startLiveAuditTimer() {
+    stopLiveAuditTimer(null, false);
+    liveScanStartTime = Date.now();
+
+    if (valTime) {
+      valTime.innerText = "0.0s";
+      valTime.style.color = "var(--accent-primary)";
+    }
+    const subTime = document.getElementById("sub-metric-time");
+    if (subTime) {
+      subTime.innerText = currentLang === "ar"
+        ? "جارٍ قياس زمن الفحص مباشرة..."
+        : "Measuring execution time live...";
+    }
+
+    liveTimerInterval = setInterval(() => {
+      if (!liveScanStartTime || !valTime) return;
+      const elapsedSec = ((Date.now() - liveScanStartTime) / 1000).toFixed(1);
+      valTime.innerText = `${elapsedSec}s`;
+    }, 100);
+  }
+
+  function stopLiveAuditTimer(finalDuration = null, success = true) {
+    if (liveTimerInterval) {
+      clearInterval(liveTimerInterval);
+      liveTimerInterval = null;
+    }
+
+    if (valTime) {
+      if (finalDuration != null && !isNaN(Number(finalDuration))) {
+        valTime.innerText = `${Number(finalDuration).toFixed(2)}s`;
+      } else if (liveScanStartTime) {
+        const elapsedSec = ((Date.now() - liveScanStartTime) / 1000).toFixed(2);
+        valTime.innerText = `${elapsedSec}s`;
+      }
+      valTime.style.color = "var(--accent-info)";
+    }
+
+    const subTime = document.getElementById("sub-metric-time");
+    if (subTime) {
+      if (success) {
+        subTime.innerText = currentLang === "ar"
+          ? "الزمن المقاس الإجمالي لهذه الجولة بالثواني"
+          : "Total measured execution time in seconds";
+      } else {
+        subTime.innerText = currentLang === "ar"
+          ? "توقف الفحص أو حدث خطأ"
+          : "Scan stopped or encountered an error";
+      }
+    }
+    liveScanStartTime = null;
+  }
+
+  function startPtesProgression() {
+    stopPtesProgression();
+
+    for (let i = 1; i <= 7; i++) {
+      const el = document.getElementById(`ptes-${i}`);
+      if (el) el.className = "ptes-phase-item";
+    }
+
+    let currentStep = 1;
+    const step1 = document.getElementById("ptes-1");
+    if (step1) step1.className = "ptes-phase-item active";
+
+    ptesProgressionInterval = setInterval(() => {
+      if (currentStep < 6) {
+        const prevEl = document.getElementById(`ptes-${currentStep}`);
+        if (prevEl) prevEl.className = "ptes-phase-item completed";
+
+        currentStep++;
+        const nextEl = document.getElementById(`ptes-${currentStep}`);
+        if (nextEl) nextEl.className = "ptes-phase-item active";
+      }
+    }, 950);
+  }
+
+  function finishAllPtesSteps() {
+    stopPtesProgression();
+    for (let i = 1; i <= 7; i++) {
+      const el = document.getElementById(`ptes-${i}`);
+      if (el) el.className = "ptes-phase-item completed";
+    }
+  }
+
+  function stopPtesProgression() {
+    if (ptesProgressionInterval) {
+      clearInterval(ptesProgressionInterval);
+      ptesProgressionInterval = null;
+    }
+  }
+
+  function resetPtesSteps() {
+    stopPtesProgression();
+    for (let i = 1; i <= 7; i++) {
+      const el = document.getElementById(`ptes-${i}`);
+      if (el) el.className = "ptes-phase-item";
+    }
+  }
+
+  // =========================================================================
   // 4. State Reset Function
   // =========================================================================
   function resetDashboardState() {
     activeProjectId = null;
+    stopLiveAuditTimer(null, false);
+    resetPtesSteps();
 
     if (valRisk) valRisk.innerText = currentLang === "ar" ? "غير مُقيّم" : "Not assessed";
     if (valVulns) valVulns.innerText = currentLang === "ar" ? "غير متاح" : "N/A";
@@ -546,7 +654,14 @@ document.addEventListener("DOMContentLoaded", () => {
     if (subCompliance) {
       subCompliance.innerText = currentLang === "ar" ? "بانتظار بدء الفحص والتقييم" : "Awaiting scan";
     }
-    if (valTime) valTime.innerText = currentLang === "ar" ? "غير متاح" : "N/A";
+    if (valTime) {
+      valTime.innerText = currentLang === "ar" ? "غير متاح" : "N/A";
+      valTime.style.color = "var(--accent-info)";
+    }
+    const subTime = document.getElementById("sub-metric-time");
+    if (subTime) {
+      subTime.innerText = currentLang === "ar" ? "الزمن المقاس الإجمالي لهذه الجولة بالثواني" : "Total measured execution time in seconds";
+    }
 
     for (const bar of [barAsvsL1, barAsvsL2, barCis, barNist]) {
       if (bar) bar.style.width = "0%";
@@ -639,6 +754,9 @@ document.addEventListener("DOMContentLoaded", () => {
         scanStatus.innerText = i18n[currentLang].statusRunning;
       }
 
+      startLiveAuditTimer();
+      startPtesProgression();
+
       log(`[SCAN] Starting available checks for ${currentScope}: ${url}`, "warn");
 
       try {
@@ -711,6 +829,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
         renderVaptResults(result);
       } catch (err) {
+        stopLiveAuditTimer(null, false);
+        stopPtesProgression();
         log(`[ERROR] Audit execution failed: ${err.message}`, "danger");
         btnStartAudit.disabled = false;
         btnStartAudit.innerText = i18n[currentLang].btnStartAudit;
@@ -735,6 +855,9 @@ document.addEventListener("DOMContentLoaded", () => {
         scanStatus.innerText = i18n[currentLang].statusRunning;
       }
 
+      startLiveAuditTimer();
+      startPtesProgression();
+
       log(`[SAST AUDIT] Starting static code & configuration audit on package: ${selectedFile.name}`, "warn");
 
       try {
@@ -758,6 +881,8 @@ document.addEventListener("DOMContentLoaded", () => {
         if (result.project_id) activeProjectId = result.project_id;
         renderVaptResults(result);
       } catch (err) {
+        stopLiveAuditTimer(null, false);
+        stopPtesProgression();
         log(`[ERROR] Local audit failed: ${err.message}`, "danger");
       } finally {
         btnUploadAudit.disabled = false;
@@ -786,9 +911,9 @@ document.addEventListener("DOMContentLoaded", () => {
         : (currentLang === "ar" ? "غير متاح" : "N/A");
     }
     if (valVulns) valVulns.innerText = displayOrUnavailable(result.vulns_count);
-    if (valTime) valTime.innerText = result.duration != null
-      ? `${displayOrUnavailable(result.duration)}s`
-      : (currentLang === "ar" ? "غير متاح" : "N/A");
+    
+    stopLiveAuditTimer(result.duration != null ? result.duration : null, true);
+    finishAllPtesSteps();
 
     // Calculate or retrieve actual tested compliance
     const vulns = result.vulnerabilities || [];
