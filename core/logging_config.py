@@ -20,6 +20,8 @@ SENSITIVE_PATTERNS = [
 class SensitiveDataRedactor(logging.Filter):
     """مرشح لتنقيح السجلات ومنع تسريب البيانات الحساسة أو بيانات الاعتماد."""
     def filter(self, record: logging.LogRecord) -> bool:
+        if record.name == "uvicorn.access":
+            return True
         message = record.getMessage()
         for pattern, replacement in SENSITIVE_PATTERNS:
             message = pattern.sub(replacement, message)
