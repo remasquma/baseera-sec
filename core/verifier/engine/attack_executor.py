@@ -300,13 +300,24 @@ class AttackExecutor:
                 elif ".env" in endpoint:
                     res = await client.get(endpoint, timeout=5.0, follow_redirects=False)
                     http_code = res.status_code
-                    if res.status_code == 200 and any(k in res.text for k in ["DB_", "APP_", "SECRET", "KEY="]):
+                    text_lower = res.text.lower()
+                    is_html = "<!doctype html" in text_lower or "<html" in text_lower or "<head" in text_lower or "<script" in text_lower
+                    c_type = res.headers.get("content-type", "").lower()
+                    env_pattern = r"(?m)^[A-Z0-9_]{3,30}\s*=\s*[^\r\n]+"
+                    matches = re.findall(env_pattern, res.text)
+                    if (
+                        res.status_code == 200 
+                        and not is_html 
+                        and "text/html" not in c_type 
+                        and len(matches) >= 2 
+                        and any(k in res.text for k in ["DB_", "APP_", "SECRET", "KEY=", "PASSWORD="])
+                    ):
                         status = "EXPLOITED_CONFIRMED"
                         is_proven = True
-                        evidence_snippet = f"HTTP 200 OK | Leaked environment variables: {res.text[:70]}..."
+                        evidence_snippet = f"HTTP 200 OK | Verified .env configuration leak: {', '.join(matches[:2])}"
                         remediation = "انقل ملف .env خارج مجلد الجذر العام public_html."
                     else:
-                        evidence_snippet = f"HTTP {res.status_code} | .env access blocked or file not exposed."
+                        evidence_snippet = f"HTTP {res.status_code} | Target safely handled .env route (SPA fallback or access blocked)."
 
                 # -------------------------------------------------------------
                 # 6. هجوم سرقة الجلسة (Insecure Cookie / HttpOnly)
@@ -315,33 +326,48 @@ class AttackExecutor:
                     res = await client.get(endpoint, timeout=5.0, follow_redirects=True)
                     http_code = res.status_code
                     cookies_headers = res.headers.get_list("set-cookie")
+                    
+                    csrf_cookie_names = {
+                        "csrftoken", "csrf_token", "_csrf", "xsrf-token", "x-csrf-token",
+                        "antiforgery", "__requestverificationtoken", "csrftoken_v2", "csrf", "_xsrf"
+                    }
                     infra_cookies = {
                         "awsalb", "awsalbcors", "__cf_bm", "__cfruid", "cf_clearance", 
                         "cf_ob_info", "cf_use_ob", "arrafinity", "arrafinitysamesite", 
                         "incap_ses", "visid_incap", "bigipserver", "_ga", "_gid", "_gat", 
-                        "gid", "gat", "__utma", "__utmb", "__utmc", "__utmz", "optanonconsent"
+                        "gid", "gat", "__utma", "__utmb", "__utmc", "__utmz", "optanonconsent",
+                        "mid", "nid", "1p_jar", "aec", "datr", "sb", "wd", "dpr", "oo", "rur",
+                        "ig_did", "ig_nrcb", "fbp", "fr", "__secure-strp", "otz"
                     }
-                    sens_patterns = [
-                        r"(?i)sess", r"(?i)auth", r"(?i)token", r"(?i)jwt", r"(?i)login", 
-                        r"(?i)phpsessid", r"(?i)jsessionid", r"(?i)aspsessionid",
-                        r"(?i)connect\.sid", r"(?i)laravel_session"
-                    ]
+                    true_session_names = {
+                        "sessionid", "session_id", "phpsessid", "jsessionid", "aspsessionid",
+                        "connect.sid", "laravel_session", "auth_token", "access_token", "jwt",
+                        "user_session", "sid", "identity", "remember_token"
+                    }
+                    
                     sensitive_insecure = []
                     for c in cookies_headers:
                         c_name = c.split("=")[0].strip().lower()
-                        if c_name in infra_cookies or any(c_name.startswith(p) for p in ["_cf", "awsalb", "_ga"]):
+                        # استبعاد كوكيز الـ CSRF (لأنها مصممة لتقرأ بالجافاسكريبت) واستبعاد التحليلات والأجهزة
+                        if c_name in csrf_cookie_names or c_name in infra_cookies or any(c_name.startswith(p) for p in ["_cf", "awsalb", "_ga", "ig_"]):
                             continue
-                        if "httponly" not in c.lower() and any(re.search(pat, c_name) for pat in sens_patterns):
+                        
+                        is_actual_session = (
+                            c_name in true_session_names 
+                            or c_name.startswith("session_") 
+                            or c_name.startswith("sess_")
+                        )
+                        if is_actual_session and "httponly" not in c.lower():
                             sensitive_insecure.append(c)
 
                     if sensitive_insecure and res.status_code == 200:
                         status = "EXPLOITED_CONFIRMED"
                         is_proven = True
-                        evidence_snippet = f"HTTP {res.status_code} | Sensitive session cookie transmitted without HttpOnly: {sensitive_insecure[0].split(';')[0]}"
+                        evidence_snippet = f"HTTP {res.status_code} | Confirmed sensitive session cookie transmitted without HttpOnly: {sensitive_insecure[0].split(';')[0]}"
                         remediation = "Set-Cookie: session_id=xyz; Secure; HttpOnly; SameSite=Strict"
                     else:
                         status = "TARGET_SECURE"
-                        evidence_snippet = f"HTTP {res.status_code} | Session cookies protected or non-session routing cookies (AWSALB/CDN) safely filtered."
+                        evidence_snippet = f"HTTP {res.status_code} | Authentication session cookies are properly protected or absent."
 
                 # -------------------------------------------------------------
                 # 7. هجوم استدراج أخطاء الخادم (Verbose Error Fuzzing)

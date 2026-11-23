@@ -35,6 +35,10 @@ class ProofValidator:
 
             # 2. ثغرات تسريب ملفات البيئة .env
             elif ".env" in f.evidence and "env" not in seen_keys:
+                ev_str = str(f.evidence).lower()
+                # منع الإيجابيات الكاذبة في حال كان الرد صفحة HTML أو مسار SPA
+                if "<!doctype html" in ev_str or "<html" in ev_str or "<head" in ev_str or "<script" in ev_str:
+                    continue
                 seen_keys.add("env")
                 verified_list.append(VerifiedVulnerability(
                     vuln_id=f"BASEERA-ENV-{len(verified_list)+1:03d}",
@@ -140,7 +144,7 @@ class ProofValidator:
                         remediation_guide="Set-Cookie: session=xyz; Secure; HttpOnly; SameSite=Strict"
                     ))
 
-            # 5. غياب فرض التشفير الإجباري وترويسة HSTS (تسجيلها مرة واحدة فقط)
+            # 5. غياب فرض التشفير الإجباري وترويسة HSTS (تسجيلها مرة واحدة فقط بمستوى منخفض وتوصية أمان)
             elif ("HSTS" in f.title or "Strict-Transport-Security" in f.title) and "hsts" not in seen_keys:
                 seen_keys.add("hsts")
                 verified_list.append(VerifiedVulnerability(
@@ -148,10 +152,10 @@ class ProofValidator:
                     title="غياب فرض التشفير الإجباري (Missing Strict-Transport-Security)",
                     cwe_id="CWE-319",
                     owasp_category="A02:2021-Cryptographic Failures",
-                    severity=SeverityLevel.MEDIUM,
-                    cvss_score=5.3,
-                    confidence_score=0.95,
-                    description="الموقع لا يفرض على المتصفح استخدام HTTPS بشكل إجباري، مما يعرض المستخدمين لهجمات التنصت (MitM).",
+                    severity=SeverityLevel.LOW,
+                    cvss_score=3.1,
+                    confidence_score=0.90,
+                    description="الخادم لا يعيد ترويسة HSTS في هذا الرد؛ يوصى بفرضها كأفضل ممارسة لتأمين الاتصال من هجمات Downgrade.",
                     poc_evidence="Response verified without 'Strict-Transport-Security' header.",
                     attack_vector="Network Downgrade & Cleartext Sniffing",
                     remediation_guide="أضف ترويسة HSTS: Strict-Transport-Security: max-age=31536000; includeSubDomains; preload"

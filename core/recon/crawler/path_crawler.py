@@ -60,12 +60,22 @@ class PathCrawler:
                             continue
 
                     is_real_match = False
+                    text_lower = content_text.lower()
+                    is_html_doc = "<!doctype html" in text_lower or "<html" in text_lower or "<head" in text_lower or "<script" in text_lower
+                    c_type = res.headers.get("content-type", "").lower()
 
                     if path == "/.git/HEAD":
-                        if "ref: refs/" in content_sample or re.match(r"^[0-9a-f]{40}\b", content_sample):
+                        if not is_html_doc and ("ref: refs/" in content_sample or re.match(r"^[0-9a-f]{40}\b", content_sample)):
                             is_real_match = True
                     elif path == "/.env":
-                        if any(k in content_sample for k in ["DB_", "APP_", "SECRET", "PASSWORD", "KEY="]):
+                        env_pattern = r"(?m)^[A-Z0-9_]{3,30}\s*=\s*[^\r\n]+"
+                        matches = re.findall(env_pattern, content_text)
+                        if (
+                            not is_html_doc 
+                            and "text/html" not in c_type 
+                            and len(matches) >= 2 
+                            and any(k in content_text for k in ["DB_", "APP_", "SECRET", "PASSWORD", "KEY="])
+                        ):
                             is_real_match = True
                     elif path == "/backup.sql":
                         # Must contain SQL dump signatures

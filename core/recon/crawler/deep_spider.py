@@ -380,13 +380,17 @@ class DeepSpider:
                         except Exception:
                             pass
 
-                    if "/xmlrpc.php" in path and (r.status_code in [200, 405] or "xml-rpc" in r.text.lower()):
-                        self.wordpress_findings.append({
-                            "title": "تفعيل واجهة XML-RPC لووردبريس (WordPress XML-RPC API Enabled)",
-                            "url": target,
-                            "evidence": f"XML-RPC endpoint exposed at {target} (Allows brute-force amplification and pingback DDoS)",
-                            "cwe": "CWE-200"
-                        })
+                    if "/xmlrpc.php" in path:
+                        text_lower = r.text.lower()
+                        is_html_resp = "<!doctype html" in text_lower or "<html" in text_lower or "<head" in text_lower
+                        # الخادم الحقيقي لووردبريس يعيد نصاً محدداً وصريحاً عند طلب GET
+                        if not is_html_resp and r.status_code == 200 and "XML-RPC server accepts POST requests only." in r.text:
+                            self.wordpress_findings.append({
+                                "title": "تفعيل واجهة XML-RPC لووردبريس (WordPress XML-RPC API Enabled)",
+                                "url": target,
+                                "evidence": f"XML-RPC endpoint confirmed at {target} ('XML-RPC server accepts POST requests only.')",
+                                "cwe": "CWE-200"
+                            })
 
                     # استخراج روابط من robots.txt إن وجد
                     if "/robots.txt" in path:

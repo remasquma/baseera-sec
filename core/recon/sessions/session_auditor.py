@@ -10,20 +10,29 @@ from typing import Dict, List, Any
 from core.engine.models import ReconFinding
 
 class SessionAuditor:
-    # قائمة كوكيز موازنات الأحمال والشبكات السحابية (ليست جلسات مستخدمين ولا تمثل خطورة سرقة جلسة)
-    INFRASTRUCTURE_COOKIES = {
+    # كوكيز الحماية من تزوير الطلبات (CSRF Tokens) - مصممة عمداً لتكون مقروءة بالجافاسكريبت لحماية الطلبات
+    # لذلك لا يجوز نهائياً تصنيف غياب HttpOnly عنها كثغرة أمنية (Double Submit Cookie Pattern)
+    CSRF_COOKIE_NAMES = {
+        "csrftoken", "csrf_token", "_csrf", "xsrf-token", "x-csrf-token", 
+        "antiforgery", "__requestverificationtoken", "csrftoken_v2", "csrf", "_xsrf"
+    }
+
+    # كوكيز موازنات الأحمال والشبكات السحابية والتحليلات وتفضيلات الأجهزة (ليست جلسات مصادقة مستخدمين)
+    INFRASTRUCTURE_AND_ANALYTICS_COOKIES = {
         "awsalb", "awsalbcors", "__cf_bm", "__cfruid", "cf_clearance", 
         "cf_ob_info", "cf_use_ob", "arrafinity", "arrafinitysamesite", 
         "incap_ses", "visid_incap", "bigipserver", "_ga", "_gid", "_gat", 
-        "gid", "gat", "__utma", "__utmb", "__utmc", "__utmz", "optanonconsent"
+        "gid", "gat", "__utma", "__utmb", "__utmc", "__utmz", "optanonconsent",
+        "mid", "nid", "1p_jar", "aec", "datr", "sb", "wd", "dpr", "oo", "rur",
+        "ig_did", "ig_nrcb", "fbp", "fr", "__secure-strp", "otz", "intercom-id"
     }
 
-    # أنماط كوكيز جلسات المستخدم الحساسة
-    SENSITIVE_SESSION_PATTERNS = [
-        r"(?i)sess", r"(?i)auth", r"(?i)token", r"(?i)jwt", r"(?i)id", 
-        r"(?i)login", r"(?i)phpsessid", r"(?i)jsessionid", r"(?i)aspsessionid",
-        r"(?i)connect\.sid", r"(?i)laravel_session", r"(?i)remember"
-    ]
+    # أسماء وأنماط كوكيز جلسات الدخول الحقيقية فقط (True Authentication Session Cookies)
+    TRUE_SESSION_COOKIE_EXACT = {
+        "sessionid", "session_id", "phpsessid", "jsessionid", "aspsessionid",
+        "connect.sid", "laravel_session", "auth_token", "access_token", "jwt", 
+        "user_session", "sid", "identity", "remember_token"
+    }
 
     @classmethod
     def audit_cookies(cls, set_cookie_headers: List[str]) -> List[ReconFinding]:
@@ -39,8 +48,21 @@ class SessionAuditor:
                 continue
             audited_cookie_names.add(cookie_name_lower)
 
-            # تجاهل كوكيز موازنات الأحمال السحابية والـ CDN لمنع الإنذارات الكاذبة
-            if cookie_name_lower in cls.INFRASTRUCTURE_COOKIES or any(cookie_name_lower.startswith(ic) for ic in ["_cf", "awsalb", "_ga"]):
+            # 1. استبعاد كوكيز الـ CSRF من فحص HttpOnly (لأنها مصممة لتقرأ عبر كود الفرونت إند)
+            is_csrf_cookie = (
+                cookie_name_lower in cls.CSRF_COOKIE_NAMES 
+                or cookie_name_lower.endswith("csrf") 
+                or cookie_name_lower.endswith("csrftoken")
+                or cookie_name_lower.endswith("xsrf-token")
+            )
+
+            # 2. استبعاد كوكيز التحليلات وتوجيه السيرفرات والأجهزة
+            is_infra_or_analytics = (
+                cookie_name_lower in cls.INFRASTRUCTURE_AND_ANALYTICS_COOKIES
+                or any(cookie_name_lower.startswith(p) for p in ["_ga", "_cf", "awsalb", "ig_"])
+            )
+
+            if is_infra_or_analytics:
                 continue
 
             parts_lower = [p.lower() for p in cookie_parts]
@@ -48,33 +70,42 @@ class SessionAuditor:
             has_secure = "secure" in parts_lower
             has_samesite = any("samesite" in p for p in parts_lower)
 
-            is_sensitive_session = any(re.search(pat, cookie_name_lower) for pat in cls.SENSITIVE_SESSION_PATTERNS)
+            # التحقق الدقيق: هل الكوكي يمثل جلسة دخول مستخدم حقيقية؟
+            is_true_session = (
+                cookie_name_lower in cls.TRUE_SESSION_COOKIE_EXACT
+                or (cookie_name_lower.startswith("session") and not is_csrf_cookie)
+                or (cookie_name_lower.startswith("sess_") and not is_csrf_cookie)
+                or (cookie_name_lower.startswith("auth_") and not is_csrf_cookie)
+            )
 
-            if not has_httponly:
+            # لا يُطلب HttpOnly إلا على كوكيز الجلسات الحقيقية فقط
+            if is_true_session and not is_csrf_cookie and not has_httponly:
                 findings.append(ReconFinding(
                     category="cookies",
                     title=f"غياب سمة HttpOnly عن كوكيز الجلسة (Missing HttpOnly Flag): {cookie_name}",
-                    description=f"ملف تعريف ارتباط الجلسة '{cookie_name}' يفتقر إلى سمة HttpOnly. هذا يسمح لأي سكريبت عبر XSS بقراءة معرف الجلسة بالكامل وسرقة حساب المستخدم.",
+                    description=f"ملف تعريف ارتباط الجلسة الحساس '{cookie_name}' يفتقر إلى سمة HttpOnly. يوصى بإضافتها لمنع السكريبتات الخبيثة من قراءته.",
                     evidence=cookie_str,
-                    risk_indicator="high" if is_sensitive_session else "medium"
+                    risk_indicator="high"
                 ))
 
-            if not has_secure:
+            # كوكيز الجلسات الحقيقية أو كوكيز الـ CSRF إذا نقلت دون Secure
+            if (is_true_session or is_csrf_cookie) and not has_secure:
                 findings.append(ReconFinding(
                     category="cookies",
                     title=f"غياب سمة Secure عن كوكيز الجلسة (Missing Secure Flag): {cookie_name}",
-                    description=f"ملف تعريف ارتباط الجلسة '{cookie_name}' يفتقر إلى سمة Secure، مما يسمح بإرسال الكوكي عبر بروتوكول HTTP غير المشفر وتعريضه للتنصت (Network Sniffing).",
+                    description=f"ملف تعريف ارتباط الجلسة '{cookie_name}' يفتقر إلى سمة Secure، مما يسمح بإرسال الكوكي عبر بروتوكول HTTP غير المشفر وتعريضه للتنصت.",
                     evidence=cookie_str,
-                    risk_indicator="medium" if is_sensitive_session else "low"
+                    risk_indicator="medium"
                 ))
 
-            if not has_samesite:
+            # فحص SameSite لجلسات الدخول الحقيقية فقط لمنع التضخيم والإنذارات الكاذبة
+            if is_true_session and not is_csrf_cookie and not has_samesite:
                 findings.append(ReconFinding(
                     category="cookies",
                     title=f"غياب سمة SameSite عن كوكيز الجلسة (Missing SameSite Flag): {cookie_name}",
-                    description=f"ملف تعريف ارتباط الجلسة '{cookie_name}' يفتقر إلى سمة SameSite (SameSite=Lax/Strict)، مما يعرض المستخدم لهجمات تزوير الطلبات عبر المواقع (CSRF).",
+                    description=f"ملف تعريف ارتباط الجلسة '{cookie_name}' يفتقر إلى سمة SameSite (SameSite=Lax/Strict)، مما يعرضه للطلبات عبر المواقع.",
                     evidence=cookie_str,
-                    risk_indicator="low" if not is_sensitive_session else "medium"
+                    risk_indicator="low"
                 ))
 
         return findings
