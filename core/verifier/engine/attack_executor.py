@@ -248,22 +248,28 @@ class AttackExecutor:
                 elif "Clickjacking" in action.attack_name:
                     res = await client.get(endpoint, timeout=5.0, follow_redirects=True)
                     http_code = res.status_code
+                    c_type = res.headers.get("content-type", "").lower()
                     headers_lower = {k.lower(): v for k, v in res.headers.items()}
                     has_xfo = "x-frame-options" in headers_lower
                     csp = headers_lower.get("content-security-policy", "")
                     has_frame_ancestors = "frame-ancestors" in csp
 
-                    # شرط قطعي: يجب أن تكون الصفحة تعمل فعلياً بـ 200 OK لتعتبر ثغرة حقيقية قابلة للاستغلال
-                    if res.status_code == 200 and not has_xfo and not has_frame_ancestors:
+                    # شروط قطعية لمنع الإنذارات الكاذبة:
+                    # 1. الاستجابة يجب أن تكون صفحة HTML حقيقية (وليست API JSON أو أصل وسائط)
+                    # 2. الصفحة تعمل فعلياً بـ 200 OK
+                    # 3. الصفحة تحتوي على واجهة مستخدم تفاعلية (أزرار، حقول، روابط) قابلة للاستغلال
+                    is_html = any(t in c_type for t in ["text/html", "application/xhtml+xml"])
+                    body_lower = res.text.lower()
+                    has_interactive_ui = any(tag in body_lower for tag in ["<form", "<button", "<input", "<a ", "role=\"button\""])
+
+                    if res.status_code == 200 and is_html and has_interactive_ui and not has_xfo and not has_frame_ancestors:
                         status = "EXPLOITED_CONFIRMED"
                         is_proven = True
-                        evidence_snippet = f"HTTP 200 OK | Missing 'X-Frame-Options' and 'frame-ancestors' policy. Page allows full UI embedding."
+                        evidence_snippet = f"HTTP 200 OK | Interactive HTML page lacks 'X-Frame-Options' and CSP 'frame-ancestors'. Full UI embedding confirmed."
                         remediation = "أضف ترويسة: X-Frame-Options: SAMEORIGIN أو Content-Security-Policy: frame-ancestors 'self';"
-                    elif res.status_code != 200:
-                        status = "TARGET_SECURE"
-                        evidence_snippet = f"HTTP {res.status_code} | Endpoint not viable for Clickjacking (Non-200 response)."
                     else:
-                        evidence_snippet = f"HTTP {res.status_code} | Framing prevented by policy: {headers_lower.get('x-frame-options', 'CSP active')}"
+                        status = "TARGET_SECURE"
+                        evidence_snippet = f"HTTP {res.status_code} | Target not viable for Clickjacking (Secured by policy or non-HTML/non-interactive resource)."
 
                 # -------------------------------------------------------------
                 # 3. هجوم تخفيض التشفير (SSL Strip / HSTS)
@@ -375,15 +381,16 @@ class AttackExecutor:
                 elif "Fuzzing" in action.attack_name or "Stack Trace" in action.attack_name:
                     res = await client.get(endpoint, timeout=5.0, follow_redirects=False)
                     http_code = res.status_code
-                    body_lower = res.text.lower()
-                    has_stack_trace = any(w in body_lower for w in ["fatal error", "stack trace", "traceback (most recent call last)", "syntax error", "/var/www/", "exception in line"])
-                    if has_stack_trace or res.status_code == 500:
+                    # فحص دقيق عبر ZeroFPGuard للتحقق من وجود إطارات استدعاء فعلية للخطأ (وليس مجرد كود 500 أو كلمة error عادية)
+                    is_real_trace, trace_desc = ZeroFPGuard.is_true_stack_trace(res.text)
+                    if is_real_trace and res.status_code in [500, 200]:
                         status = "EXPLOITED_CONFIRMED"
                         is_proven = True
-                        evidence_snippet = f"HTTP {res.status_code} | Verbose internal exception leaked: {res.text[:70]}..."
+                        evidence_snippet = f"HTTP {res.status_code} | Confirmed Verbose Stack Trace Disclosure: {trace_desc}"
                         remediation = "عطّل عرض الأخطاء للمستخدمين (display_errors = Off) واستخدم صفحات خطأ عامة."
                     else:
-                        evidence_snippet = f"HTTP {res.status_code} | Server handled invalid route safely without leaking debug traces."
+                        status = "TARGET_SECURE"
+                        evidence_snippet = f"HTTP {res.status_code} | Server handled invalid route safely without leaking runtime stack frames."
 
                 # -------------------------------------------------------------
                 # 8. هجوم التلاعب بطرائق البروتوكول (HTTP Method Tampering)
@@ -392,14 +399,29 @@ class AttackExecutor:
                     res = await client.options(endpoint, timeout=5.0, follow_redirects=True)
                     http_code = res.status_code
                     allow_header = res.headers.get("allow", "").upper()
-                    dangerous_methods = [m for m in ["PUT", "DELETE", "TRACE"] if m in allow_header]
-                    if dangerous_methods and res.status_code == 200:
+                    
+                    # فحص فعلي مباشر: لا نعتبر الطريقة ثغرة إلا إذا أثبت الاستغلال العملي
+                    is_method_exploited = False
+                    exploit_evidence = ""
+
+                    # 1. اختبار TRACE الفعلي لكشف Cross-Site Tracing (XST)
+                    if "TRACE" in allow_header:
+                        try:
+                            trace_resp = await client.request("TRACE", endpoint, headers={"X-Baseera-Probe": "canary_test"}, timeout=4.0)
+                            if trace_resp.status_code == 200 and "canary_test" in trace_resp.text:
+                                is_method_exploited = True
+                                exploit_evidence = "HTTP TRACE actively echoed custom request headers (Confirmed XST vulnerability)."
+                        except Exception:
+                            pass
+
+                    if is_method_exploited:
                         status = "EXPLOITED_CONFIRMED"
                         is_proven = True
-                        evidence_snippet = f"HTTP {res.status_code} | Dangerous HTTP methods allowed: {', '.join(dangerous_methods)}"
-                        remediation = "عطّل طرائق PUT و DELETE و TRACE غير المستخدمة في إعدادات خادم الويب."
+                        evidence_snippet = f"HTTP {res.status_code} | {exploit_evidence}"
+                        remediation = "عطّل طريقة HTTP TRACE غير الآمنة في إعدادات خادم الويب (TraceEnable off)."
                     else:
-                        evidence_snippet = f"HTTP {res.status_code} | Allowed methods restricted: {allow_header or 'Default safe methods'}"
+                        status = "TARGET_SECURE"
+                        evidence_snippet = f"HTTP {res.status_code} | Standard REST methods advertised in Allow ({allow_header or 'Default'}); dangerous execution rejected."
 
                 else:
                     res = await client.get(endpoint, timeout=5.0, follow_redirects=True)

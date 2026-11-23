@@ -12,6 +12,7 @@ from urllib.parse import urlsplit, urlunsplit, urljoin, parse_qsl
 import httpx
 from bs4 import BeautifulSoup
 from core.recon.surface.param_extractor import InjectionPoint, TargetSurface
+from core.verifier.engine.fp_guard import ZeroFPGuard
 
 class DeepSpider:
     """
@@ -283,30 +284,32 @@ class DeepSpider:
                         elif any(k in match.lower() for k in ["product", "item", "user", "order"]):
                             self._add_injection_point("id", "1", "GET", full_api, False)
 
-        # 2. فحص ثغرات DOM XSS مع تسجيل مسار الملف والسطر المتأثر بدقة وبقاء الرابط نقياً
-        matched_source = None
-        for src in self.DOM_XSS_SOURCES:
-            if re.search(src, js_text):
-                matched_source = src
-                break
-        matched_sink = None
-        for snk in self.DOM_XSS_SINKS:
-            if re.search(snk, js_text):
-                matched_sink = snk
-                break
+        # 2. فحص ثغرات DOM XSS الحقيقية والمثبتة فقط (Zero False Positive Guard)
+        # استبعاد تام لكافة حزم الطرف الثالث المعروفة والـ CDNs والمكتبات الآمنة
+        if ZeroFPGuard.is_benign_third_party_resource(pure_clean_url):
+            return
 
-        if matched_source and matched_sink and "dompurify" not in js_text.lower():
-            snippet = ""
-            for line in js_text.splitlines():
-                if re.search(matched_source, line) or re.search(matched_sink, line):
-                    snippet = line.strip()[:100]
+        # التحقق الصارم من وجود تدفق بيانات مباشر حقيقي (Direct Tainted Data Flow)
+        # بين المصدر (Source) والمصب (Sink) في نفس السياق البرمجي
+        direct_dom_xss_patterns = [
+            (r"(?i)(?:\.innerHTML\s*=|document\.write\s*\(|document\.writeln\s*\(|\$\([^\)]+\)\.html\s*\(|eval\s*\()[^;\n]*(?:location\.(?:search|hash|href)|document\.referrer|window\.name)", "Direct Unsanitized Sink Injection"),
+            (r"(?i)(?:var|let|const)\s+([a-zA-Z0-9_$]+)\s*=\s*(?:location\.(?:search|hash|href)|document\.referrer)[\s\S]{1,200}?(?:\.innerHTML\s*=|document\.write\s*\(|\.html\s*\()\s*\1", "Direct Variable Flow to DOM Sink")
+        ]
+
+        is_real_dom_xss = False
+        matched_evidence = ""
+        if "dompurify" not in js_text.lower():
+            for pat, desc in direct_dom_xss_patterns:
+                m = re.search(pat, js_text)
+                if m:
+                    is_real_dom_xss = True
+                    snippet = m.group(0)[:120].strip().replace("\n", " ")
+                    matched_evidence = f"{desc}: {snippet}"
                     break
 
+        if is_real_dom_xss:
             script_desc = f"inline script on page '{current_page_url}'" if is_inline else f"script file '{pure_clean_url}'"
-            evidence_str = (
-                f"Source ({matched_source}) -> Sink ({matched_sink}) in {script_desc}"
-                f"{f' | Code: {snippet}' if snippet else ''}"
-            )
+            evidence_str = f"Verified DOM XSS Flow in {script_desc} | Evidence: {matched_evidence}"
             self.dom_xss_findings.append({
                 "url": pure_clean_url,
                 "evidence": evidence_str,

@@ -12,6 +12,7 @@ import httpx
 from bs4 import BeautifulSoup, Comment
 from typing import Dict, Any, Optional
 from urllib.parse import urlencode, parse_qsl, urlsplit, urlunsplit
+from core.verifier.engine.fp_guard import ZeroFPGuard
 
 
 class XSSDetector:
@@ -91,20 +92,24 @@ class XSSDetector:
                                 break
 
                         if not is_in_container:
-                            # True unescaped DOM element injection confirmed!
-                            return {
-                                "is_vulnerable": True,
-                                "type": "Reflected Cross-Site Scripting (XSS)",
-                                "severity": "HIGH",
-                                "param_name": param_name,
-                                "payload": current_probe,
-                                "http_code": resp.status_code,
-                                "latency_ms": elapsed_ms,
-                                "evidence": f"HTTP {resp.status_code} | Parameter '{param_name}' directly injected unescaped <{cls.XSS_TAG_NAME}> tag element into live DOM tree.",
-                                "raw_request": f"{method} {base_endpoint}?{urlencode(test_params)}",
-                                "raw_response": f"<{cls.XSS_TAG_NAME}> element rendered as executable DOM node.",
-                                "remediation": f"Apply context-aware HTML output encoding (e.g. htmlspecialchars / encodeURIComponent) to parameter '{param_name}'."
-                            }
+                            # تأكيد إضافي عبر وسم عشوائي مستقل تماماً لمنع أي شبهة إنذار كاذب
+                            is_repeatable = await ZeroFPGuard.verify_xss_repeatable(
+                                target_url, param_name, method, client
+                            )
+                            if is_repeatable:
+                                return {
+                                    "is_vulnerable": True,
+                                    "type": "Reflected Cross-Site Scripting (XSS)",
+                                    "severity": "HIGH",
+                                    "param_name": param_name,
+                                    "payload": current_probe,
+                                    "http_code": resp.status_code,
+                                    "latency_ms": elapsed_ms,
+                                    "evidence": f"HTTP {resp.status_code} | Parameter '{param_name}' directly injected unescaped <{cls.XSS_TAG_NAME}> tag element into live DOM tree. [Repeatability Double-Verified]",
+                                    "raw_request": f"{method} {base_endpoint}?{urlencode(test_params)}",
+                                    "raw_response": f"<{cls.XSS_TAG_NAME}> element rendered as executable DOM node.",
+                                    "remediation": f"Apply context-aware HTML output encoding (e.g. htmlspecialchars / encodeURIComponent) to parameter '{param_name}'."
+                                }
 
                     # Check if it was trapped inside an HTML comment
                     comments = soup.find_all(string=lambda text: isinstance(text, Comment))

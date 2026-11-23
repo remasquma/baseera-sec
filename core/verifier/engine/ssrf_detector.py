@@ -80,35 +80,42 @@ class SSRFDetector:
 
         # 3. Test loopback canary probe for active internal reflection
         if is_url_param:
-            test_probes = [
-                ("http://127.0.0.1:8765/api/health", ["Baseera Sec Internal API", "Baseera Sec", "ami-id", "security-credentials"])
+            cloud_metadata_patterns = [
+                (r"\bami-[a-z0-9]{8,17}\b", "AWS EC2 AMI Identifier"),
+                (r"\"Code\"\s*:\s*\"Success\",\s*\"LastUpdated\"", "Cloud IAM Role Security Credentials"),
+                (r"computeMetadata/v1", "GCP Instance Metadata Response")
             ]
-            for probe_url, indicators in test_probes:
-                try:
-                    probe_params = orig_params.copy()
-                    probe_params[param_name] = probe_url
-                    t0 = time.perf_counter()
-                    if method.upper() == "POST":
-                        r_probe = await client.post(base_endpoint, data=probe_params, timeout=5.0, follow_redirects=True)
-                    else:
-                        r_probe = await client.get(f"{base_endpoint}?{urlencode(probe_params)}", timeout=5.0, follow_redirects=True)
-                    lat_ms = round((time.perf_counter() - t0) * 1000, 2)
-                    if r_probe.status_code == 200 and any(ind in r_probe.text for ind in indicators):
-                        return {
-                            "is_vulnerable": True,
-                            "type": "Server-Side Request Forgery (SSRF - CWE-918)",
-                            "severity": "CRITICAL",
-                            "param_name": param_name,
-                            "payload": probe_url,
-                            "http_code": r_probe.status_code,
-                            "latency_ms": lat_ms,
-                            "evidence": f"Server reflected internal service response when requesting '{probe_url}': {r_probe.text[:150]}",
-                            "raw_request": f"{method} {base_endpoint}?{urlencode(probe_params)}",
-                            "raw_response": r_probe.text[:300],
-                            "remediation": "Restrict outbound server requests using strict IP and domain allowlists; block requests to 127.0.0.1 and private subnets."
-                        }
-                except Exception:
-                    pass
+            probe_url = "http://169.254.169.254/latest/meta-data/ami-id"
+            try:
+                probe_params = orig_params.copy()
+                probe_params[param_name] = probe_url
+                t0 = time.perf_counter()
+                if method.upper() == "POST":
+                    r_probe = await client.post(base_endpoint, data=probe_params, timeout=5.0, follow_redirects=True)
+                else:
+                    r_probe = await client.get(f"{base_endpoint}?{urlencode(probe_params)}", timeout=5.0, follow_redirects=True)
+                lat_ms = round((time.perf_counter() - t0) * 1000, 2)
+                
+                # منع الإيجابيات الكاذبة: يجب ألا تكون استجابة الـ metadata صفحة HTML ولا موجودة في خط الأساس
+                r_type = r_probe.headers.get("content-type", "").lower()
+                if r_probe.status_code == 200 and "text/html" not in r_type:
+                    for pat, pat_desc in cloud_metadata_patterns:
+                        if re.search(pat, r_probe.text) and not re.search(pat, base_text):
+                            return {
+                                "is_vulnerable": True,
+                                "type": "Server-Side Request Forgery (SSRF - CWE-918)",
+                                "severity": "CRITICAL",
+                                "param_name": param_name,
+                                "payload": probe_url,
+                                "http_code": r_probe.status_code,
+                                "latency_ms": lat_ms,
+                                "evidence": f"Server fetched and disclosed internal cloud metadata: detected '{pat_desc}'.",
+                                "raw_request": f"{method} {base_endpoint}?{urlencode(probe_params)}",
+                                "raw_response": r_probe.text[:300],
+                                "remediation": "Restrict outbound server requests using strict IP and domain allowlists; block requests to 169.254.169.254 and private subnets."
+                            }
+            except Exception:
+                pass
 
         # 4. Safe Heuristic Mode (Parameter Analysis without Unsafe Probes)
         if is_url_param and (current_val.startswith("http://") or current_val.startswith("https://")):

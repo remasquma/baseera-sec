@@ -8,6 +8,7 @@ import time
 import httpx
 from typing import Dict, Any, Optional
 from urllib.parse import urlencode, parse_qsl, urlsplit, urlunsplit
+from core.verifier.engine.fp_guard import ZeroFPGuard
 
 class SSTIDetector:
     # حمولات رياضية آمنة وفريدة لكشف التنفيذ داخل محركات القوالب
@@ -60,19 +61,24 @@ class SSTIDetector:
                 # الشرط القطعي: ظهور الناتج الحسابي المنفذ محاطاً بالعلامة المميزة
                 target_token = f"baseera{expected_eval}sec"
                 if target_token in resp.text and target_token not in base_text:
-                    return {
-                        "is_vulnerable": True,
-                        "type": "Server-Side Template Injection (SSTI)",
-                        "param_name": param_name,
-                        "payload": probe_payload,
-                        "evaluated_result": expected_eval,
-                        "http_code": resp.status_code,
-                        "latency_ms": lat_ms,
-                        "evidence": f"HTTP {resp.status_code} | Parameter '{param_name}' evaluated template payload '{probe_payload}' to '{expected_eval}'.",
-                        "raw_request": f"{method} {base_endpoint} ({param_name}={probe_payload})",
-                        "raw_response": f"Template evaluated to: {target_token}",
-                        "remediation": "تجنب تمرير مدخلات المستخدم مباشرة إلى دوال تصيير القوالب (Template Engines)، واستخدم التمرير الآمن للمتغيرات (Context Variables)."
-                    }
+                    # التحقق المزدوج الفعلي بحساب عملية ضرب ديناميكية جديدة
+                    is_repeatable = await ZeroFPGuard.verify_ssti_dynamic(
+                        target_url, param_name, method, client
+                    )
+                    if is_repeatable:
+                        return {
+                            "is_vulnerable": True,
+                            "type": "Server-Side Template Injection (SSTI)",
+                            "param_name": param_name,
+                            "payload": probe_payload,
+                            "evaluated_result": expected_eval,
+                            "http_code": resp.status_code,
+                            "latency_ms": lat_ms,
+                            "evidence": f"HTTP {resp.status_code} | Parameter '{param_name}' evaluated template payload '{probe_payload}' to '{expected_eval}' [Dynamic Math Arithmetic Double-Verified].",
+                            "raw_request": f"{method} {base_endpoint} ({param_name}={probe_payload})",
+                            "raw_response": f"Template evaluated to: {target_token}",
+                            "remediation": "تجنب تمرير مدخلات المستخدم مباشرة إلى دوال تصيير القوالب (Template Engines)، واستخدم التمرير الآمن للمتغيرات (Context Variables)."
+                        }
             except Exception:
                 continue
 

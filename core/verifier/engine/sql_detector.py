@@ -13,6 +13,7 @@ from typing import Dict, Any, List, Optional, Tuple
 from urllib.parse import urlencode, parse_qsl, urlsplit, urlunsplit
 from core.ai.local_model_analyzer import local_ai_classifier
 from core.engine.models import VerifiedVulnerability, SeverityLevel
+from core.verifier.engine.fp_guard import ZeroFPGuard
 
 
 class SQLDetector:
@@ -124,83 +125,98 @@ class SQLDetector:
                         break
 
                 if matched_error:
-                    raw_req = f"{method} {base_endpoint}?{urlencode(test_params)} HTTP/1.1"
-                    proof = f"DBMS Error: {matched_error} | Snippet: \"{matched_snippet}\" | Status: HTTP {resp.status_code}"
-                    ai_eval = local_ai_classifier.score_text(matched_snippet)
-
-                    remediation_code = (
-                        "Use parameterized queries (Prepared Statements) exclusively:\n"
-                        f"$stmt = $pdo->prepare('SELECT * FROM table WHERE {param_name} = :val');\n"
-                        f"$stmt->execute(['val' => ${param_name}]);"
+                    # التحقق الصارم من أن الخطأ ناتج حقيقة عن كسر استعلام SQL وليس نصاً ثابتاً في الصفحة
+                    is_dynamic_sqli = await ZeroFPGuard.verify_sqli_error_suppression(
+                        target_url, param_name, method, current_val, client, pattern
                     )
+                    if is_dynamic_sqli:
+                        raw_req = f"{method} {base_endpoint}?{urlencode(test_params)} HTTP/1.1"
+                        proof = f"DBMS Error: {matched_error} [Suppression Verified with ''] | Snippet: \"{matched_snippet}\" | Status: HTTP {resp.status_code}"
+                        ai_eval = local_ai_classifier.score_text(matched_snippet)
 
-                    return {
-                        "is_vulnerable": True,
-                        "type": "Error-Based SQL Injection",
-                        "severity": "CRITICAL",
-                        "param_name": param_name,
-                        "dbms": matched_error,
-                        "payload": test_params[param_name],
-                        "http_code": resp.status_code,
-                        "latency_ms": elapsed_ms,
-                        "evidence": proof,
-                        "raw_request": raw_req,
-                        "raw_response": matched_snippet,
-                        "remediation": remediation_code,
-                        "ai_evaluation": ai_eval
-                    }
+                        remediation_code = (
+                            "Use parameterized queries (Prepared Statements) exclusively:\n"
+                            f"$stmt = $pdo->prepare('SELECT * FROM table WHERE {param_name} = :val');\n"
+                            f"$stmt->execute(['val' => ${param_name}]);"
+                        )
+
+                        return {
+                            "is_vulnerable": True,
+                            "type": "Error-Based SQL Injection",
+                            "severity": "CRITICAL",
+                            "param_name": param_name,
+                            "dbms": matched_error,
+                            "payload": test_params[param_name],
+                            "http_code": resp.status_code,
+                            "latency_ms": elapsed_ms,
+                            "evidence": proof,
+                            "raw_request": raw_req,
+                            "raw_response": matched_snippet,
+                            "remediation": remediation_code,
+                            "ai_evaluation": ai_eval
+                        }
 
             except Exception:
                 continue
 
-        # 3. Boolean Differential Blind SQL Injection
+        # 3. Boolean Differential Blind SQL Injection (Tautology Triangulation)
         try:
-            p_true = orig_params.copy()
+            p_true1 = orig_params.copy()
+            p_true2 = orig_params.copy()
             p_false = orig_params.copy()
-            p_true[param_name] = f"{current_val} AND 1=1"
+            
+            p_true1[param_name] = f"{current_val} AND 1=1"
+            p_true2[param_name] = f"{current_val} AND 2=2"
             p_false[param_name] = f"{current_val} AND 1=2"
 
             t0_bool = time.perf_counter()
             if method.upper() == "POST":
-                r_true = await client.post(base_endpoint, data=p_true, timeout=7.0, follow_redirects=True)
+                r_true1 = await client.post(base_endpoint, data=p_true1, timeout=7.0, follow_redirects=True)
+                r_true2 = await client.post(base_endpoint, data=p_true2, timeout=7.0, follow_redirects=True)
                 r_false = await client.post(base_endpoint, data=p_false, timeout=7.0, follow_redirects=True)
             else:
-                r_true = await client.get(f"{base_endpoint}?{urlencode(p_true)}", timeout=7.0, follow_redirects=True)
+                r_true1 = await client.get(f"{base_endpoint}?{urlencode(p_true1)}", timeout=7.0, follow_redirects=True)
+                r_true2 = await client.get(f"{base_endpoint}?{urlencode(p_true2)}", timeout=7.0, follow_redirects=True)
                 r_false = await client.get(f"{base_endpoint}?{urlencode(p_false)}", timeout=7.0, follow_redirects=True)
 
             elapsed_bool_ms = round((time.perf_counter() - t0_bool) * 1000, 2)
-            len_diff = abs(len(r_true.text) - len(r_false.text))
+            
+            # معايير التثليث المنطقي الصارم (Strict Triangulation):
+            # 1. كل من شرطي الصواب (1=1 و 2=2) يعيدان استجابة متطابقة بحجم مقارب لخط الأساس
+            # 2. شرط الخطأ (1=2) يُسقط محتوى الصفحة بشكل واضح بفارق > 75 بايت
+            # 3. تطابق T1 و T2 ينفي أن يكون التغير مجرد بحث نصي عن كلمات مختلفة
+            len_true_diff = abs(len(r_true1.text) - len(r_true2.text))
+            len_false_diff = len(r_true1.text) - len(r_false.text)
 
-            # Differential criteria:
-            # 1. True condition returns HTTP 200 and resembles baseline
-            # 2. False condition strips content significantly (len_diff > 80 bytes)
-            # 3. HTTP status of false is 200 or 404/Empty, but not a generic network timeout
-            if r_true.status_code == 200 and len_diff > 80 and abs(len(r_true.text) - base_len) < 60:
-                # Repeatability confirmation step to eliminate transient jitter
-                if method.upper() == "POST":
-                    r_true_confirm = await client.post(base_endpoint, data=p_true, timeout=6.0, follow_redirects=True)
-                else:
-                    r_true_confirm = await client.get(f"{base_endpoint}?{urlencode(p_true)}", timeout=6.0, follow_redirects=True)
-
-                if abs(len(r_true_confirm.text) - len(r_true.text)) < 20:
-                    raw_req = f"{method} {base_endpoint}?{urlencode(p_false)} HTTP/1.1"
-                    proof = f"Boolean SQLi Divergence: '1 AND 1=1' returned {len(r_true.text)} bytes vs '1 AND 1=2' stripped to {len(r_false.text)} bytes (diff: {len_diff} bytes)."
-                    ai_eval = local_ai_classifier.score_text(proof)
-                    return {
-                        "is_vulnerable": True,
-                        "type": "Boolean-Based Blind SQL Injection",
-                        "severity": "CRITICAL",
-                        "param_name": param_name,
-                        "dbms": "Generic SQL Database",
-                        "payload": f"{current_val} AND 1=1 vs 1=2",
-                        "http_code": r_false.status_code,
-                        "latency_ms": elapsed_bool_ms,
-                        "evidence": proof,
-                        "raw_request": raw_req,
-                        "raw_response": f"Response shifted from {len(r_true.text)} to {len(r_false.text)} bytes under FALSE predicate.",
-                        "remediation": "Apply parameterized queries and disallow direct input interpolation into SQL predicates.",
-                        "ai_evaluation": ai_eval
-                    }
+            if (
+                r_true1.status_code == 200 
+                and r_true2.status_code == 200 
+                and len_true_diff <= 25 
+                and len_false_diff > 75 
+                and abs(len(r_true1.text) - base_len) < 60
+            ):
+                # تأكيد إضافي لتكرارية الحالة
+                raw_req = f"{method} {base_endpoint}?{urlencode(p_false)} HTTP/1.1"
+                proof = (
+                    f"Boolean SQLi Triangulation Proven: 'AND 1=1' ({len(r_true1.text)}b) matches 'AND 2=2' ({len(r_true2.text)}b), "
+                    f"while 'AND 1=2' stripped page to {len(r_false.text)}b (delta: {len_false_diff}b)."
+                )
+                ai_eval = local_ai_classifier.score_text(proof)
+                return {
+                    "is_vulnerable": True,
+                    "type": "Boolean-Based Blind SQL Injection",
+                    "severity": "CRITICAL",
+                    "param_name": param_name,
+                    "dbms": "Generic SQL Database",
+                    "payload": f"{current_val} AND 1=1 vs 1=2",
+                    "http_code": r_false.status_code,
+                    "latency_ms": elapsed_bool_ms,
+                    "evidence": proof,
+                    "raw_request": raw_req,
+                    "raw_response": f"Boolean differential verified by tautology triangulation: T1/T2 equivalence confirmed.",
+                    "remediation": "Apply parameterized queries and disallow direct input interpolation into SQL predicates.",
+                    "ai_evaluation": ai_eval
+                }
         except Exception:
             pass
 

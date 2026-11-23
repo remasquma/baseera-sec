@@ -161,7 +161,7 @@ class ProofValidator:
                     remediation_guide="أضف ترويسة HSTS: Strict-Transport-Security: max-age=31536000; includeSubDomains; preload"
                 ))
 
-            # 6. غياب سياسة أمان المحتوى CSP (CWE-693 الصحيح وليس 1021)
+            # 6. غياب سياسة أمان المحتوى CSP (CWE-693 كإجراء تعزيز دفاعي)
             elif ("CSP" in f.title or "Content Security Policy" in f.title) and "csp" not in seen_keys:
                 seen_keys.add("csp")
                 verified_list.append(VerifiedVulnerability(
@@ -169,10 +169,10 @@ class ProofValidator:
                     title="غياب سياسة أمان المحتوى (Missing Content Security Policy)",
                     cwe_id="CWE-693",
                     owasp_category="A05:2021-Security Misconfiguration",
-                    severity=SeverityLevel.MEDIUM,
-                    cvss_score=5.0,
+                    severity=SeverityLevel.LOW,
+                    cvss_score=3.4,
                     confidence_score=0.95,
-                    description="غياب CSP يترك المتصفح دون قيود على مصادر السكريبتات، مما يرفع احتمالية نجاح هجمات حقن XSS.",
+                    description="غياب CSP يترك المتصفح دون قيود على مصادر السكريبتات، مما يرفع احتمالية نجاح هجمات حقن XSS في حال وجودها.",
                     poc_evidence="Response lacks 'Content-Security-Policy' restriction headers.",
                     attack_vector="Unrestricted Cross-Site Script Execution",
                     remediation_guide="أضف ترويسة CSP صارمة تقيد المصادر الموثوقة للأكواد: Content-Security-Policy: default-src 'self';"

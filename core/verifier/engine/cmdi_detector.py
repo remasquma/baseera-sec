@@ -10,6 +10,7 @@ import time
 import httpx
 from typing import Dict, Any, List, Optional
 from urllib.parse import urlencode, parse_qsl, urlsplit, urlunsplit
+from core.verifier.engine.fp_guard import ZeroFPGuard
 
 
 class CMDiDetector:
@@ -78,19 +79,24 @@ class CMDiDetector:
 
                     for regex_pattern, pattern_desc in cls.PATTERNS:
                         if re.search(regex_pattern, resp_text) and not re.search(regex_pattern, base_text):
-                            return {
-                                "is_vulnerable": True,
-                                "type": "OS Command Injection (CWE-78)",
-                                "severity": "CRITICAL",
-                                "param_name": param_name,
-                                "payload": probe_payload,
-                                "http_code": resp.status_code,
-                                "latency_ms": lat_ms,
-                                "evidence": f"OS Command executed and validated in response: detected '{pattern_desc}'.",
-                                "raw_request": f"{method} {base_endpoint} with {param_name}={test_params[param_name]}",
-                                "raw_response": resp.text[:300].strip(),
-                                "remediation": "Do not pass user input to shell interpreters (system, popen, exec). Use safe standard library functions with array arguments."
-                            }
+                            # التحقق المزدوج الفعلي بتوليد أرقام عشوائية لعملية حسابية جديدة بالأمر expr
+                            is_repeatable = await ZeroFPGuard.verify_cmdi_dynamic(
+                                target_url, param_name, method, client
+                            )
+                            if is_repeatable:
+                                return {
+                                    "is_vulnerable": True,
+                                    "type": "OS Command Injection (CWE-78)",
+                                    "severity": "CRITICAL",
+                                    "param_name": param_name,
+                                    "payload": probe_payload,
+                                    "http_code": resp.status_code,
+                                    "latency_ms": lat_ms,
+                                    "evidence": f"OS Command executed and validated in response: detected '{pattern_desc}' [Dynamic Math Arithmetic Double-Verified].",
+                                    "raw_request": f"{method} {base_endpoint} with {param_name}={test_params[param_name]}",
+                                    "raw_response": resp.text[:300].strip(),
+                                    "remediation": "Do not pass user input to shell interpreters (system, popen, exec). Use safe standard library functions with array arguments."
+                                }
             except Exception:
                 continue
 
