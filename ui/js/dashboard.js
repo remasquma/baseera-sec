@@ -111,8 +111,8 @@ document.addEventListener("DOMContentLoaded", () => {
   // =========================================================================
   const i18n = {
     ar: {
-      brandTitle: "منصة بصيرة للفحص الأمني | BaceeraSec",
-      brandSubtitle: "Autonomous Cognitive VAPT & AI Scanner | Team 2Bit",
+      brandTitle: "Baceer | بصير الثغرات الأمنية",
+      brandSubtitle: "Baceer — Autonomous Cognitive VAPT & AI Scanner | Team 2Bit",
       navDashboard: "لوحة التحكم (Dashboard)",
       navTarget: "نطاق الفحص (Target Scope)",
       navWorkflow: "سير العمل (PTES Workflow)",
@@ -189,13 +189,13 @@ document.addEventListener("DOMContentLoaded", () => {
       tdEmpty: "لم يبدأ الفحص بعد. حدد النطاق واضغط \"بدء الفحص المنهجي الشامل\".",
       tdAuditing: "جارٍ تنفيذ الفحوصات المتاحة...",
       lblSummaryHeader: "ملخص الفحص الجنائي بالذكاء الاصطناعي",
-      lblModalTitle: "معاينة التقرير النهائي | Baseera VAPT Report",
+      lblModalTitle: "معاينة التقرير النهائي | Baceer VAPT Report",
       btnModalPrint: "طباعة / حفظ كـ PDF",
       btnCloseModal: "إغلاق"
     },
     en: {
-      brandTitle: "BaceeraSec — Cognitive VAPT Platform",
-      brandSubtitle: "Autonomous Web & Package Security Scanner | Team 2Bit",
+      brandTitle: "Baceer — بصير الثغرات الأمنية",
+      brandSubtitle: "Baceer — Autonomous Cognitive VAPT & AI Scanner | Team 2Bit",
       navDashboard: "Dashboard",
       navTarget: "Target Scope",
       navWorkflow: "PTES Workflow",
@@ -238,7 +238,7 @@ document.addEventListener("DOMContentLoaded", () => {
         "6. Aggregate available findings",
         "7. Save report"
       ],
-      metricRisk: "Baseera Aggregate Risk Index (0-10)",
+      metricRisk: "Baceer Aggregate Risk Index (0-10)",
       valRiskIdle: "Not Assessed",
       subMetricRisk: "Internal security index based on composite CVSS weights",
       metricVulns: "Findings Returned by Scan",
@@ -272,7 +272,7 @@ document.addEventListener("DOMContentLoaded", () => {
       tdEmpty: "No scan yet. Select a target and click 'Start Comprehensive Audit'.",
       tdAuditing: "Running available checks...",
       lblSummaryHeader: "AI Forensic Scan Summary",
-      lblModalTitle: "Report Preview | Baseera Sec VAPT",
+      lblModalTitle: "Report Preview | Baceer VAPT Report",
       btnModalPrint: "Print / Save as PDF",
       btnCloseModal: "Close"
     }
@@ -293,15 +293,15 @@ document.addEventListener("DOMContentLoaded", () => {
     if (btnLocalModelStatus) btnLocalModelStatus.innerText = dict.btnRefreshModels;
 
     if (btnLangToggle) {
-      btnLangToggle.innerHTML = `<span class="toggle-icon">🌐</span><span class="toggle-text">${dict.langToggle}</span>`;
+      btnLangToggle.innerHTML = `<span class="toggle-text">${dict.langToggle}</span>`;
     }
 
     // Topbar Action Buttons
-    if (btnExportPdf) btnExportPdf.innerHTML = `<span>📄</span><span>${dict.btnExportPdf}</span>`;
-    if (btnExportHtml) btnExportHtml.innerHTML = `<span>👁️</span><span>${dict.btnExportHtml}</span>`;
-    if (btnExportSarif) btnExportSarif.innerHTML = `<span>⚙️</span><span>${dict.btnExportSarif}</span>`;
+    if (btnExportPdf) btnExportPdf.innerHTML = `<span>${dict.btnExportPdf}</span>`;
+    if (btnExportHtml) btnExportHtml.innerHTML = `<span>${dict.btnExportHtml}</span>`;
+    if (btnExportSarif) btnExportSarif.innerHTML = `<span>${dict.btnExportSarif}</span>`;
     const btnBenchmark = document.getElementById("btn-owasp-benchmark");
-    if (btnBenchmark) btnBenchmark.innerHTML = `<span>🧪</span><span>${dict.btnBenchmark}</span>`;
+    if (btnBenchmark) btnBenchmark.innerHTML = `<span>${dict.btnBenchmark}</span>`;
 
     // Sidebar Nav Links
     setText("nav-dashboard", dict.navDashboard);
@@ -420,8 +420,7 @@ document.addEventListener("DOMContentLoaded", () => {
     if (htmlDoc) htmlDoc.setAttribute("data-theme", theme);
     const dict = i18n[currentLang];
     if (btnThemeToggle) {
-      const icon = theme === "dark" ? "☀️" : "🌙";
-      btnThemeToggle.innerHTML = `<span class="toggle-icon">${icon}</span><span class="toggle-text">${theme === "dark" ? dict.themeToggleLight : dict.themeToggleDark}</span>`;
+      btnThemeToggle.innerHTML = `<span class="toggle-text">${theme === "dark" ? dict.themeToggleLight : dict.themeToggleDark}</span>`;
     }
   }
 

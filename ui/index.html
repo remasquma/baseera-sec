@@ -6,7 +6,7 @@
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
-  <title>BaceeraSec — Autonomous Cognitive VAPT Platform | Team 2Bit</title>
+  <title>Baceer — بصير الثغرات الأمنية | Team 2Bit</title>
   <link rel="stylesheet" href="css/cyber.css?v=20261122_v10">
 </head>
 <body>
@@ -25,10 +25,10 @@
           <img src="img/2bit_logo.jpg" alt="2Bit Logo" class="brand-logo-img">
         </div>
         <div class="brand-info">
-          <div class="brand-name">BaceeraSec</div>
-          <div class="brand-tagline" id="txt-brand-subtitle">Autonomous VAPT & AI Scanner</div>
+          <div class="brand-name">Baceer</div>
+          <div class="brand-tagline" id="txt-brand-subtitle">بصير الثغرات الأمنية</div>
         </div>
-        <button class="sidebar-close-btn" id="btn-close-sidebar" aria-label="Close sidebar">✕</button>
+        <button class="sidebar-close-btn" id="btn-close-sidebar" aria-label="Close sidebar">&times;</button>
       </div>
 
       <!-- Team Badge Pill (Efferd LLC / Skillset Inspiration) -->
@@ -45,31 +45,24 @@
       <nav class="sidebar-nav">
         <div class="nav-section-title">PLATFORM</div>
         <a href="#section-overview" class="nav-item active">
-          <span class="nav-icon">📊</span>
           <span class="nav-label" id="nav-dashboard">لوحة التحكم (Dashboard)</span>
         </a>
         <a href="#section-target" class="nav-item">
-          <span class="nav-icon">🎯</span>
           <span class="nav-label" id="nav-target">نطاق الفحص (Target Scope)</span>
         </a>
         <a href="#section-workflow" class="nav-item">
-          <span class="nav-icon">⚡</span>
           <span class="nav-label" id="nav-workflow">سير العمل (PTES Workflow)</span>
         </a>
         <a href="#section-attacks" class="nav-item">
-          <span class="nav-icon">⚔️</span>
           <span class="nav-label" id="nav-attacks">مصفوفة الهجمات (Attack Matrix)</span>
         </a>
         <a href="#section-compliance" class="nav-item">
-          <span class="nav-icon">🛡️</span>
           <span class="nav-label" id="nav-compliance">معايير الامتثال (Compliance)</span>
         </a>
         <a href="#section-terminal" class="nav-item">
-          <span class="nav-icon">💻</span>
           <span class="nav-label" id="nav-terminal">الطرفية المباشرة (Live Terminal)</span>
         </a>
         <a href="#section-vulns" class="nav-item">
-          <span class="nav-icon">📋</span>
           <span class="nav-label" id="nav-vulns">سجل الثغرات (Findings)</span>
         </a>
       </nav>
@@ -87,11 +80,9 @@
       <div class="sidebar-footer">
         <div class="footer-toggles">
           <button id="btn-theme-toggle" class="btn-toggle-switch">
-            <span class="toggle-icon">🌙</span>
             <span class="toggle-text">الوضع الفاتح</span>
           </button>
           <button id="btn-lang-toggle" class="btn-toggle-switch">
-            <span class="toggle-icon">🌐</span>
             <span class="toggle-text">English</span>
           </button>
         </div>
@@ -109,29 +100,25 @@
       <!-- Topbar Header -->
       <header class="app-topbar">
         <div class="topbar-left">
-          <button class="mobile-toggle-btn" id="btn-open-sidebar" aria-label="Open sidebar">☰</button>
+          <button class="mobile-toggle-btn" id="btn-open-sidebar" aria-label="Open sidebar">&#9776;</button>
           <div class="topbar-greeting">
-            <h1 class="greeting-title" id="txt-brand-title">منصة بصيرة للفحص الأمني | BaceeraSec</h1>
-            <p class="greeting-subtitle">Autonomous Cognitive Vulnerability Assessment & Penetration Testing</p>
+            <h1 class="greeting-title" id="txt-brand-title">Baceer | بصير الثغرات الأمنية</h1>
+            <p class="greeting-subtitle">منصة فحص الثغرات الأمنية واختبار الاختراق الذكي | Cognitive VAPT Platform</p>
           </div>
         </div>
 
         <div class="topbar-right">
           <!-- Quick Export & Benchmark Actions -->
           <button id="btn-owasp-benchmark" class="topbar-action-btn benchmark">
-            <span>🧪</span>
             <span>نتائج الاختبار الاصطناعي</span>
           </button>
           <button id="btn-export-pdf" class="topbar-action-btn">
-            <span>📄</span>
             <span>تصدير PDF</span>
           </button>
           <button id="btn-export-html" class="topbar-action-btn">
-            <span>👁️</span>
             <span>معاينة HTML</span>
           </button>
           <button id="btn-export-sarif" class="topbar-action-btn">
-            <span>⚙️</span>
             <span>SARIF 2.1.0</span>
           </button>
         </div>
@@ -180,14 +167,14 @@
 
           <!-- Real-Time URL Validation Error Banner -->
           <div id="url-error-banner" style="display: none; margin-top: 10px; padding: 10px 14px; border-radius: 8px; background: rgba(239, 68, 68, 0.12); border: 1px solid rgba(239, 68, 68, 0.45); color: #f87171; font-size: 13px; font-weight: 600; line-height: 1.5; align-items: center; gap: 8px;">
-            <span style="font-size: 16px;">⚠️</span>
+            <span style="font-weight: 800; font-family: monospace;">[!]</span>
             <span id="url-error-text"></span>
           </div>
 
           <!-- Enterprise Advanced Scan Options Collapsible -->
           <details class="card" style="margin-top: 14px; padding: 12px 16px; background: var(--bg-card-subtle); border: 1px solid var(--border-color);">
             <summary style="cursor: pointer; font-size: 12px; font-weight: 700; color: var(--accent-primary); outline: none;">
-              ⚙️ خيارات الفحص المتقدم: المصادقة (Authenticated Scanning) واستيراد مواصفات APIs (OpenAPI / Postman / GraphQL)
+              خيارات الفحص المتقدم: المصادقة (Authenticated Scanning) واستيراد مواصفات APIs (OpenAPI / Postman / GraphQL)
             </summary>
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 14px; font-size: 11px;">
               <label style="grid-column: 1 / -1; display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--text-secondary);">
@@ -197,7 +184,7 @@
 
               <!-- Auth Section -->
               <div style="background: var(--bg-input); padding: 12px; border-radius: var(--radius-md); border: 1px solid var(--border-color);">
-                <strong style="color: var(--text-primary); display: block; margin-bottom: 8px;">🔐 نمط المصادقة (Authenticated Session):</strong>
+                <strong style="color: var(--text-primary); display: block; margin-bottom: 8px;">نمط المصادقة (Authenticated Session):</strong>
                 <select id="auth-type-select" class="text-input" style="padding: 6px 10px; font-size: 11.5px; margin-bottom: 10px; width: 100%;">
                   <option value="none">بدون مصادقة (Public Scanning)</option>
                   <option value="bearer">رمز تفويض (JWT / Bearer Token)</option>
@@ -230,7 +217,7 @@
 
               <!-- API Import Section -->
               <div style="background: var(--bg-input); padding: 12px; border-radius: var(--radius-md); border: 1px solid var(--border-color);">
-                <strong style="color: var(--text-primary); display: block; margin-bottom: 8px;">📄 استيراد مواصفات APIs (OpenAPI / Postman / GraphQL):</strong>
+                <strong style="color: var(--text-primary); display: block; margin-bottom: 8px;">استيراد مواصفات APIs (OpenAPI / Postman / GraphQL):</strong>
                 <textarea id="api-spec-content" class="text-input" rows="6" placeholder="الصق كود مواصفات الـ API (JSON أو YAML أو GraphQL) هنا لفحص نقاط النهاية والحمولات آلياً..." style="font-size: 11px; font-family: monospace; resize: vertical; width: 100%;"></textarea>
               </div>
             </div>
@@ -277,7 +264,7 @@
         <section class="metrics-grid">
           <!-- Metric 1: Risk Index -->
           <div class="metric-card">
-            <div class="metric-label" id="lbl-metric-risk">مؤشر المخاطر التجميعي (Baseera، 0-10)</div>
+            <div class="metric-label" id="lbl-metric-risk">مؤشر المخاطر التجميعي (Baceer، 0-10)</div>
             <div class="metric-value" id="val-risk" style="color: var(--accent-danger);">غير مُقيّم</div>
             <div class="metric-sub" id="sub-metric-risk">مؤشر أمني داخلي مستند إلى أوزان CVSS المركبة</div>
           </div>
@@ -381,7 +368,7 @@
               <div class="card-title" id="lbl-attacks-header">مصفوفة الهجمات المنفذة حياً (Targeted Adversarial Attacks Execution)</div>
               <div class="card-subtitle" id="lbl-attacks-sub">Active live HTTP verification across multi-vector adversarial tactics</div>
             </div>
-            <span id="ai-model-badge" class="api-status-pill active">Model: Baseera Attack Strategist</span>
+            <span id="ai-model-badge" class="api-status-pill active">Model: Baceer Attack Strategist</span>
           </div>
           <div id="ai-attacks-list" class="attacks-grid"></div>
         </section>
@@ -395,7 +382,7 @@
             <button id="btn-clear-terminal" class="btn-toggle" style="padding: 3px 10px; font-size: 11px;">مسح السجل</button>
           </div>
           <div class="terminal-window" id="terminal-logs">
-            <div class="terminal-line"><span class="terminal-time">[00:00:00]</span> <span class="terminal-tag-info">[INIT]</span> Baseera Sec loaded. Team 2Bit - Nazzoor AI active. Select an authorized target.</div>
+            <div class="terminal-line"><span class="terminal-time">[00:00:00]</span> <span class="terminal-tag-info">[INIT]</span> Baceer loaded. Team 2Bit - Nazzoor AI active. Select an authorized target.</div>
           </div>
         </section>
 
@@ -457,10 +444,9 @@
   <div class="modal-overlay" id="report-modal" style="display: none;">
     <div class="modal-window">
       <div class="modal-header">
-        <span style="font-weight: 700; font-size: 13.5px;" id="lbl-modal-title">معاينة التقرير النهائي | Baseera VAPT Report</span>
+        <span style="font-weight: 700; font-size: 13.5px;" id="lbl-modal-title">معاينة التقرير النهائي | Baceer VAPT Report</span>
         <div style="display: flex; gap: 8px;">
           <button id="btn-modal-print" class="btn-toggle" style="background: var(--accent-primary); color: white; display: flex; align-items: center; gap: 6px;">
-            <span>🖨️</span>
             <span id="lbl-modal-print">طباعة / حفظ كـ PDF</span>
           </button>
           <button id="btn-close-modal" class="btn-toggle">إغلاق</button>
@@ -477,7 +463,7 @@
     <div class="modal-window" style="max-width: 950px;">
       <div class="modal-header" style="background: rgba(14, 165, 233, 0.1); border-bottom: 1px solid rgba(14, 165, 233, 0.3);">
         <div style="display: flex; align-items: center; gap: 10px;">
-          <span style="font-weight: 800; font-size: 14px; color: #38bdf8;">نتائج مجموعة الاختبار الاصطناعية الخاصة بـ Baseera Sec</span>
+          <span style="font-weight: 800; font-size: 14px; color: #38bdf8;">نتائج مجموعة الاختبار الاصطناعية الخاصة بـ Baceer</span>
         </div>
         <div style="display: flex; gap: 8px;">
           <button id="btn-run-live-benchmark" class="btn btn-primary" style="padding: 5px 14px; font-size: 11.5px;">إعادة تشغيل الفحص المعياري حياً</button>
@@ -530,7 +516,7 @@
 
         <!-- Summary Note -->
         <div style="background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.3); border-radius: var(--radius-md); padding: 14px; font-size: 12px; color: #10b981; line-height: 1.6;">
-          هذه مجموعة اختبار اصطناعية داخلية خاصة بقياس دقة محركات Baseera Sec. النتائج تقيس الحالات المقاسة في الاختبار فقط.
+          هذه مجموعة اختبار اصطناعية داخلية خاصة بقياس دقة محركات Baceer. النتائج تقيس الحالات المقاسة في الاختبار فقط.
         </div>
       </div>
     </div>

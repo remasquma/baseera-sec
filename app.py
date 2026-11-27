@@ -31,7 +31,7 @@ def main():
     try:
         import webview
         window = webview.create_window(
-            title="بصيرة | Baseera Sec - Enterprise Cognitive VAPT Platform",
+            title="Baceer — بصير الثغرات الأمنية | Enterprise Cognitive VAPT Platform",
             url=local_url,
             width=1350,
             height=880,
