@@ -126,20 +126,21 @@ orchestrator = AuditOrchestrator()
 # حالة مجموعة النماذج المحلية
 @app.get("/api/local-model-status")
 async def local_model_status():
-    """Return local & cloud Nazzoor AI model availability."""
+    """Return local Nazzoor AI model availability truth."""
     from core.ai.local_model_analyzer import local_ai_classifier
     loaded_count = sum(
-        status == "LOADED_OK"
+        status == "LOADED"
         for status in local_ai_classifier.model_status.values()
     )
-    if loaded_count == 0:
-        loaded_count = 3  # Cloud fallback with Hugging Face Hub models
+    total_models = len(local_ai_classifier.MODEL_NAMES)
+    all_loaded = loaded_count == total_models
     return {
-        "message": f"Nazzoor Security AI Models ({loaded_count}/3) loaded and verified.",
+        "message": f"Nazzoor Security AI Models ({loaded_count}/{total_models}) loaded.",
         "loaded_count": loaded_count,
-        "classification_approved": True,
-        "local_ai_status": "LOADED_OK",
-        "is_loaded": True,
+        "total_models": total_models,
+        "classification_approved": all_loaded,
+        "local_ai_status": "LOADED" if all_loaded else ("PARTIAL_LOAD" if loaded_count > 0 else "NOT_LOADED"),
+        "is_loaded": all_loaded,
         "model_statuses": dict(local_ai_classifier.model_status),
         "model_label_statuses": dict(local_ai_classifier.model_label_status),
         "model_compatibility": dict(local_ai_classifier.model_compatibility),
@@ -368,13 +369,27 @@ def map_standards_metadata(v_title: str, cwe_id: str) -> Dict[str, Any]:
 async def start_audit(req: AuditRequest, db: Session = Depends(get_db)):
     target_url = req.target_url.strip()
     if not target_url:
-        raise HTTPException(status_code=400, detail="Target URL is required")
+        raise HTTPException(status_code=400, detail="يرجى إدخال رابط الهدف أولاً | Target URL is required")
 
-    # إضافة بروتوكول افتراضي إذا أدخل المستخدم الدومين والمنفذ مباشرة (مثل pentest-ground.com:81)
-    if not target_url.startswith(("http://", "https://")):
-        target_url = f"http://{target_url}"
+    # 1. التحقق من وجود البروتوكول صراحةً (http:// أو https://)
+    import re
+    if not re.match(r"^https?://", target_url, re.IGNORECASE):
+        raise HTTPException(
+            status_code=400,
+            detail="يجب أن يبدأ الرابط ببروتوكول صالح (http:// أو https://). يُرجى كتابة البروتوكول صراحةً وإعادة المحاولة."
+        )
 
-    # التحقق المسبق من نطاق الهدف وسلامة العنوان لمنع الهجمات العكسية والتجاوز
+    # 2. التحقق المسبق من نطاق الهدف وسلامة العنوان لمنع الهجمات العكسية والتجاوز
+    from urllib.parse import urlparse
+    import socket
+    parsed_target = urlparse(target_url)
+    hostname = (parsed_target.hostname or "").strip().lower()
+    if not hostname:
+        raise HTTPException(
+            status_code=400,
+            detail="اسم النطاق أو الخادم غير صالح. يُرجى كتابة رابط موقع حقيقي وإعادة المحاولة."
+        )
+
     from core.network.request_gateway import RequestGateway, ScopeViolationError
     try:
         gw_precheck = RequestGateway(
@@ -383,9 +398,50 @@ async def start_audit(req: AuditRequest, db: Session = Depends(get_db)):
         )
         gw_precheck.validate_destination(target_url)
     except ScopeViolationError as e:
+        err_str = str(e)
+        if "DNS resolution failed" in err_str or "Could not resolve" in err_str:
+            raise HTTPException(
+                status_code=400,
+                detail=f"الموقع المستهدف «{hostname}» غير موجود فعلياً (تعذر العثور على اسم النطاق في خوادم DNS). يرجى التأكد من كتابة اسم الموقع الفعلي بشكل صحيح."
+            )
         raise HTTPException(status_code=403, detail=f"Target URL is out of authorized scope or prohibited: {e}")
     except Exception as e:
-        raise HTTPException(status_code=400, detail=f"Invalid target URL or destination resolution error: {e}")
+        raise HTTPException(status_code=400, detail=f"رابط الهدف غير صالح أو تعذر الوصول إليه: {e}")
+
+    # 3. التحقق من أن الموقع حي ومستجيب فعلياً (Live Reachability Probe) لضمان عدم فحص موقع وهمي
+    import httpx
+    probe_ok = False
+    probe_error = ""
+    try:
+        async with httpx.AsyncClient(
+            verify=False,
+            follow_redirects=True,
+            timeout=httpx.Timeout(connect=5.0, read=5.0, write=5.0, pool=5.0)
+        ) as probe_client:
+            try:
+                await probe_client.head(
+                    target_url,
+                    headers={"User-Agent": "BaseeraSec-TargetValidator/2.0 (+https://baseera-sec.local)"}
+                )
+                probe_ok = True
+            except (httpx.RequestError, httpx.HTTPStatusError):
+                await probe_client.get(
+                    target_url,
+                    headers={"User-Agent": "BaseeraSec-TargetValidator/2.0 (+https://baseera-sec.local)"}
+                )
+                probe_ok = True
+    except (httpx.ConnectError, socket.gaierror) as e:
+        probe_error = "تعذر الاتصال بالموقع المستهدف (السيرفر مغلق أو النطاق غير موجود)."
+    except (httpx.ConnectTimeout, httpx.TimeoutException) as e:
+        probe_error = "انتهت مهلة الاتصال بالموقع المستهدف دون أي استجابة (الخادم معطل أو بطيء جداً)."
+    except Exception as e:
+        probe_error = f"تعذر الاتصال بالموقع المستهدف: {e}"
+
+    if not probe_ok:
+        raise HTTPException(
+            status_code=400,
+            detail=f"الموقع المستهدف غير متاح أو لا يمكن الوصول إليه فعلياً ({probe_error}). يُرجى التأكد من أن الموقع يعمل فعلياً وإعادة المحاولة."
+        )
 
     # إنشاء منسق فحص جديد تماماً ومستقل لكل عملية لمنع أي تسريب بيانات بين الفحوصات
     active_orchestrator = AuditOrchestrator(

@@ -23,6 +23,36 @@ document.addEventListener("DOMContentLoaded", () => {
   const panelLocalInput = document.getElementById("panel-local-input");
   const targetUrlInput = document.getElementById("target-url");
   const btnStartAudit = document.getElementById("btn-start-audit");
+  const urlErrorBanner = document.getElementById("url-error-banner");
+  const urlErrorText = document.getElementById("url-error-text");
+
+  function showUrlError(msg) {
+    if (urlErrorBanner && urlErrorText) {
+      urlErrorText.innerText = msg;
+      urlErrorBanner.style.display = "flex";
+    }
+    if (targetUrlInput) {
+      targetUrlInput.style.borderColor = "#ef4444";
+      targetUrlInput.style.boxShadow = "0 0 0 2px rgba(239, 68, 68, 0.25)";
+      targetUrlInput.focus();
+      targetUrlInput.select();
+    }
+    alert(msg);
+  }
+
+  function clearUrlError() {
+    if (urlErrorBanner) {
+      urlErrorBanner.style.display = "none";
+    }
+    if (targetUrlInput) {
+      targetUrlInput.style.borderColor = "";
+      targetUrlInput.style.boxShadow = "";
+    }
+  }
+
+  if (targetUrlInput) {
+    targetUrlInput.addEventListener("input", clearUrlError);
+  }
 
   const fileDropzone = document.getElementById("file-dropzone");
   const localFileInput = document.getElementById("local-file-input");
@@ -742,9 +772,20 @@ document.addEventListener("DOMContentLoaded", () => {
   // =========================================================================
   if (btnStartAudit) {
     btnStartAudit.addEventListener("click", async () => {
+      clearUrlError();
       const url = targetUrlInput ? targetUrlInput.value.trim() : "";
       if (!url) {
-        alert(currentLang === "ar" ? "يرجى إدخال رابط الهدف أولاً." : "Please enter target URL.");
+        showUrlError(currentLang === "ar" ? "يرجى إدخال رابط الهدف أولاً." : "Please enter target URL.");
+        return;
+      }
+
+      // 1. التحقق من وجود البروتوكول صراحةً (http:// أو https://)
+      if (!/^https?:\/\//i.test(url)) {
+        showUrlError(
+          currentLang === "ar"
+            ? "يجب أن يبدأ الرابط ببروتوكول صالح (http:// أو https://).\nيرجى كتابة البروتوكول صراحةً وإعادة المحاولة."
+            : "The URL must explicitly start with a valid protocol (http:// or https://).\nPlease correct it and retry."
+        );
         return;
       }
 
@@ -835,9 +876,13 @@ document.addEventListener("DOMContentLoaded", () => {
         stopLiveAuditTimer(null, false);
         stopPtesProgression();
         log(`[ERROR] Audit execution failed: ${err.message}`, "danger");
+        showUrlError(err.message);
         btnStartAudit.disabled = false;
         btnStartAudit.innerText = i18n[currentLang].btnStartAudit;
-        if (scanStatus) scanStatus.innerText = i18n[currentLang].statusWaiting;
+        if (scanStatus) {
+          scanStatus.dataset.idle = "true";
+          scanStatus.innerText = i18n[currentLang].statusWaiting;
+        }
       }
     });
   }
