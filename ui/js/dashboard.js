@@ -463,7 +463,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     localModelStatus.innerText = currentLang === "ar"
       ? " 3/3 ملفات نماذج جاهزة للتشخيص"
-      : " 0/3 ملفات نماذج جاهزة للتشخيص";
+      : " 3/3 ملفات نماذج جاهزة للتشخيص";
 
   } catch (err) {
     localModelStatus.className = "api-status-pill invalid";
