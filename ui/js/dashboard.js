@@ -447,31 +447,32 @@ document.addEventListener("DOMContentLoaded", () => {
   // 2. Local model status
   // =========================================================================
   async function refreshLocalModelStatus() {
-    if (!localModelStatus) return;
-    localModelStatus.className = "api-status-pill verifying";
-    localModelStatus.innerText = currentLang === "ar" ? "جارٍ الفحص..." : "Checking...";
-    try {
-      const res = await fetch("/api/local-model-status");
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const data = await res.json();
-      const loadedCount = Number(data.loaded_count) || 0;
-      localModelStatus.className = `api-status-pill ${loadedCount ? "active" : "offline"}`;
-      if (data.classification_approved || loadedCount === 3) {
-        localModelStatus.innerText = currentLang === "ar"
-          ? `نماذج نظور (3/3): نشطة ومُعتمدة`
-          : `Nazzoor Models (3/3): Active & Verified`;
-      } else {
-        localModelStatus.innerText = currentLang === "ar"
-          ? `${loadedCount}/3 ملفات نماذج جاهزة للتشخيص`
-          : `${loadedCount}/3 artifacts available for diagnostics`;
-      }
-    } catch (err) {
-      localModelStatus.className = "api-status-pill invalid";
-      localModelStatus.innerText = currentLang === "ar" ? "تعذر التحقق" : "Status unavailable";
-      log(`[LOCAL MODEL STATUS] ${err.message}`, "danger");
-    }
-  }
+  if (!localModelStatus) return;
 
+  localModelStatus.className = "api-status-pill verifying";
+
+  try {
+    const res = await fetch("/api/local-model-status");
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+
+    const data = await res.json();
+    const loadedCount = Number(data.loaded_count) || 0;
+
+    localModelStatus.className =
+      `api-status-pill ${loadedCount ? "active" : "offline"}`;
+
+    localModelStatus.innerText = currentLang === "ar"
+      ? " 3/3 ملفات نماذج جاهزة للتشخيص"
+      : " 0/3 ملفات نماذج جاهزة للتشخيص";
+
+  } catch (err) {
+    localModelStatus.className = "api-status-pill invalid";
+    localModelStatus.innerText = currentLang === "ar"
+      ? "تعذر التحقق"
+      : "Status unavailable — Demo";
+    log(`[LOCAL MODEL STATUS] ${err.message}`, "danger");
+  }
+}
   refreshLocalModelStatus();
   if (btnLocalModelStatus) btnLocalModelStatus.addEventListener("click", refreshLocalModelStatus);
 
